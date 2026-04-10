@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Box Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .box-input::-webkit-inner-spin-button,
+        .box-input::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .timer-warning {
+            color: #ef4444;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 md:p-8">
+
+    <div id="game-container" class="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- Header -->
+        <header class="bg-indigo-600 text-white p-6 text-center">
+            <h1 class="text-3xl font-bold tracking-tight">The Box Game</h1>
+            <p class="text-indigo-100 mt-2">Test your memory and association skills</p>
+        </header>
+
+        <!-- Dynamic Content Area -->
+        <main id="main-view" class="p-6 md:p-10">
+            <!-- Content gets injected here -->
+        </main>
+
+        <!-- Footer / Global Actions -->
+        <footer id="footer-actions" class="bg-slate-50 p-6 border-t flex justify-center gap-4">
+            <!-- Global buttons like Reset will appear here -->
+        </footer>
+    </div>
+
+    <!-- Message Toast Container -->
+    <div id="toast-container" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-50"></div>
+
+    <script>
+        // Configuration & State
+        const ITEM_POOL = [
+            "Apple", "Banana", "Cherry", "Dragon", "Elephant", "Frog", "Ghost", "Hippo", 
+            "Igloo", "Joker", "Koala", "Lemon", "Monkey", "Ninja", "Owl", "Pizza", 
+            "Queen", "Robot", "Snake", "Tiger", "UFO", "Vulcan", "Whale", "X-ray", 
+            "Yeti", "Zebra", "Astronaut", "Balloon", "Cactus", "Donut", "Eagle", "Falcon",
+            "Guitar", "Hammer", "Iceberg", "Jacket", "Kite", "Lizard", "Magnet", "Notebook"
+        ];
+
+        let gameState = {
+            phase: 'SETUP', // SETUP, MEMORIZE, TEST, RESULTS
+            numItems: 5,
+            boxesPerItem: 3,
+            timeLimit: 60, // Configurable time limit
+            items: [], // Array of { id, name, sequence: [], userGuess: '' }
+            shuffledItems: [], // For the Test phase
+            timeLeft: 60,
+            timerInterval: null
+        };
+
+        const mainView = document.getElementById('main-view');
+        const footerActions = document.getElementById('footer-actions');
+
+        // Initialization
+        function init() {
+            renderSetup();
+        }
+
+        // --- View Renders ---
+
+        function renderSetup() {
+            gameState.phase = 'SETUP';
+            clearInterval(gameState.timerInterval);
+            
+            mainView.innerHTML = `
+                <div class="fade-in max-w-md mx-auto space-y-8">
+                    <div class="text-center">
+                        <h2 class="text-xl font-semibold text-slate-800">Game Configuration</h2>
+                        <p class="text-slate-500">Choose your difficulty level</p>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Number of Items (5 - 20)</label>
+                            <input type="range" id="input-num-items" min="5" max="20" value="${gameState.numItems}" 
+                                class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                            <div class="flex justify-between text-xs text-slate-400 mt-2 font-mono">
+                                <span>5</span>
+                                <span id="val-num-items" class="text-indigo-600 font-bold text-lg">${gameState.numItems}</span>
+                                <span>20</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Boxes per Item (1 - 4)</label>
+                            <input type="range" id="input-boxes" min="1" max="4" value="${gameState.boxesPerItem}" 
+                                class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                            <div class="flex justify-between text-xs text-slate-400 mt-2 font-mono">
+                                <span>1</span>
+                                <span id="val-boxes" class="text-indigo-600 font-bold text-lg">${gameState.boxesPerItem}</span>
+                                <span>4</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Time Limit (30s - 5m)</label>
+                            <input type="range" id="input-time" min="30" max="300" step="10" value="${gameState.timeLimit}" 
+                                class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+                            <div class="flex justify-between text-xs text-slate-400 mt-2 font-mono">
+                                <span>30s</span>
+                                <span id="val-time" class="text-indigo-600 font-bold text-lg">${formatTime(gameState.timeLimit)}</span>
+                                <span>5m</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="handleStartGame()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl transition shadow-lg shadow-indigo-200">
+                        Start Memorizing
+                    </button>
+                </div>
+            `;
+
+            footerActions.innerHTML = '';
+
+            // Listeners for sliders
+            document.getElementById('input-num-items').addEventListener('input', (e) => {
+                gameState.numItems = parseInt(e.target.value);
+                document.getElementById('val-num-items').innerText = gameState.numItems;
+            });
+            document.getElementById('input-boxes').addEventListener('input', (e) => {
+                gameState.boxesPerItem = parseInt(e.target.value);
+                document.getElementById('val-boxes').innerText = gameState.boxesPerItem;
+            });
+            document.getElementById('input-time').addEventListener('input', (e) => {
+                gameState.timeLimit = parseInt(e.target.value);
+                document.getElementById('val-time').innerText = formatTime(gameState.timeLimit);
+            });
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function renderMemorize() {
+            gameState.phase = 'MEMORIZE';
+            gameState.timeLeft = gameState.timeLimit;
+            
+            mainView.innerHTML = `
+                <div class="fade-in space-y-6">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 bg-white/90 backdrop-blur pb-4 border-b">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-800">Phase 1: Memorize</h2>
+                            <p class="text-slate-500">Assign a sequence to each item and memorize them.</p>
+                        </div>
+                        <div id="timer-display" class="bg-slate-100 px-6 py-3 rounded-full text-2xl font-mono font-bold text-indigo-600 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            ${formatTime(gameState.timeLeft)}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        ${gameState.items.map((item, idx) => `
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center space-y-3">
+                                <span class="text-lg font-bold text-indigo-600">${item.name}</span>
+                                <div class="flex gap-2">
+                                    ${Array.from({length: gameState.boxesPerItem}).map((_, boxIdx) => `
+                                        <input 
+                                            type="number" 
+                                            min="0" max="9" 
+                                            maxlength="1"
+                                            oninput="handleBoxInput(this, ${idx}, ${boxIdx})"
+                                            onkeydown="handleKeyNavigation(event, this)"
+                                            class="box-input w-12 h-12 text-center text-xl font-bold bg-white border-2 border-slate-300 rounded-lg focus:border-indigo-500 focus:outline-none transition"
+                                            placeholder="0"
+                                        >
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="flex justify-center pt-6">
+                        <button onclick="handleFinishMemorizing()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-10 rounded-xl transition">
+                            I'm Ready!
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            footerActions.innerHTML = `
+                <button onclick="renderSetup()" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2 rounded-lg transition">
+                    Reset / Resize
+                </button>
+            `;
+
+            startTimer();
+        }
+
+        function renderTest() {
+            gameState.phase = 'TEST';
+            clearInterval(gameState.timerInterval);
+
+            // Create a list of all item names for the dropdown
+            const allNames = gameState.items.map(i => i.name).sort();
+
+            mainView.innerHTML = `
+                <div class="fade-in space-y-6">
+                    <div class="text-center pb-4 border-b">
+                        <h2 class="text-2xl font-bold text-slate-800">Phase 2: The Test</h2>
+                        <p class="text-slate-500">Match the item names to their original sequences.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${gameState.shuffledItems.map((item, idx) => `
+                            <div class="bg-white border-2 border-dashed border-slate-200 rounded-xl p-5 flex flex-col items-center space-y-4">
+                                <div class="flex gap-2">
+                                    ${item.sequence.map(num => `
+                                        <div class="w-12 h-12 flex items-center justify-center bg-indigo-100 text-indigo-700 text-xl font-bold rounded-lg shadow-inner">
+                                            ${num}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="w-full">
+                                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Which item was this?</label>
+                                    <select onchange="handleGuess(${item.originalId}, this.value)" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                                        <option value="">Select an Item...</option>
+                                        ${allNames.map(name => `<option value="${name}">${name}</option>`).join('')}
+                                    </select>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="flex justify-center pt-8">
+                        <button onclick="handleScore()" class="bg-green-600 hover:bg-green-700 text-white text-lg font-bold py-4 px-12 rounded-xl transition shadow-lg shadow-green-100">
+                            Check Score
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            footerActions.innerHTML = `
+                 <button onclick="renderSetup()" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2 rounded-lg transition">
+                    Quit / Restart
+                </button>
+            `;
+        }
+
+        function renderResults(score, total) {
+            gameState.phase = 'RESULTS';
+            const percentage = Math.round((score / total) * 100);
+            
+            let message = "Keep practicing!";
+            let icon = "🎯";
+            if (percentage === 100) { message = "Perfect Memory!"; icon = "🏆"; }
+            else if (percentage >= 80) { message = "Excellent Job!"; icon = "🌟"; }
+            else if (percentage >= 50) { message = "Pretty Good!"; icon = "👍"; }
+
+            mainView.innerHTML = `
+                <div class="fade-in text-center space-y-8 py-10">
+                    <div class="text-6xl">${icon}</div>
+                    <div>
+                        <h2 class="text-4xl font-extrabold text-slate-800">${percentage}% Correct</h2>
+                        <p class="text-xl text-slate-500 mt-2">${message}</p>
+                    </div>
+                    
+                    <div class="inline-block bg-slate-50 px-8 py-4 rounded-2xl border border-slate-100">
+                        <span class="text-slate-600 text-lg">You identified <strong class="text-indigo-600">${score}</strong> out of <strong class="text-indigo-600">${total}</strong> items correctly.</span>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center pt-6">
+                        <button onclick="handleStartGame()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-8 rounded-xl transition">
+                            Play Again (Same Settings)
+                        </button>
+                        <button onclick="renderSetup()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-4 px-8 rounded-xl transition">
+                            Change Settings
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            footerActions.innerHTML = '';
+        }
+
+        // --- Logic Handlers ---
+
+        function handleStartGame() {
+            // Generate items
+            const shuffledPool = [...ITEM_POOL].sort(() => 0.5 - Math.random());
+            gameState.items = shuffledPool.slice(0, gameState.numItems).map((name, idx) => ({
+                id: idx,
+                name: name,
+                sequence: Array(gameState.boxesPerItem).fill(0),
+                userGuess: ''
+            }));
+            
+            renderMemorize();
+        }
+
+        function handleBoxInput(el, itemIdx, boxIdx) {
+            // Only allow 0-9
+            let val = el.value.slice(-1); // Take last char if they type fast
+            if (!/^[0-9]$/.test(val)) {
+                el.value = "";
+                return;
+            }
+            el.value = val;
+            gameState.items[itemIdx].sequence[boxIdx] = parseInt(val);
+
+            // Auto-focus next box
+            const next = el.nextElementSibling;
+            if (next && next.classList.contains('box-input')) {
+                next.focus();
+            }
+        }
+
+        function handleKeyNavigation(e, el) {
+            if (e.key === "Backspace" && el.value === "") {
+                const prev = el.previousElementSibling;
+                if (prev && prev.classList.contains('box-input')) {
+                    prev.focus();
+                }
+            }
+        }
+
+        function handleFinishMemorizing() {
+            // Prepare shuffled items for testing
+            gameState.shuffledItems = gameState.items.map(item => ({
+                originalId: item.id,
+                sequence: [...item.sequence]
+            })).sort(() => 0.5 - Math.random());
+            
+            renderTest();
+        }
+
+        function handleGuess(originalId, value) {
+            const item = gameState.items.find(i => i.id === originalId);
+            if (item) item.userGuess = value;
+        }
+
+        function handleScore() {
+            let correctCount = 0;
+            gameState.items.forEach(item => {
+                if (item.userGuess === item.name) {
+                    correctCount++;
+                }
+            });
+            renderResults(correctCount, gameState.numItems);
+        }
+
+        function startTimer() {
+            const display = document.getElementById('timer-display');
+            gameState.timerInterval = setInterval(() => {
+                gameState.timeLeft--;
+                
+                display.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    ${formatTime(gameState.timeLeft)}
+                `;
+
+                if (gameState.timeLeft <= 10) {
+                    display.classList.add('timer-warning');
+                } else {
+                    display.classList.remove('timer-warning');
+                }
+
+                if (gameState.timeLeft <= 0) {
+                    clearInterval(gameState.timerInterval);
+                    showToast("Time's up! Let's start the test.");
+                    setTimeout(handleFinishMemorizing, 1500);
+                }
+            }, 1000);
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl mb-4 fade-in font-medium';
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Run app
+        window.onload = init;
+
+    </script>
+</body>
+</html>
