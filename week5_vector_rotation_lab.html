@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rotation Matrix Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        .matrix-bracket {
+            position: relative;
+            padding: 0 10px;
+        }
+        .matrix-bracket::before,
+        .matrix-bracket::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            border: 2px solid #374151;
+        }
+        .matrix-bracket::before {
+            left: 0;
+            border-right: none;
+            border-top-left-radius: 4px;
+            border-bottom-left-radius: 4px;
+        }
+        .matrix-bracket::after {
+            right: 0;
+            border-left: none;
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 100%; /* 1:1 Aspect Ratio */
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background-color: white;
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .tab-btn.active {
+            border-bottom: 2px solid #3b82f6;
+            color: #3b82f6;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center">
+
+    <header class="w-full max-w-5xl mb-8 text-center">
+        <h1 class="text-4xl font-bold text-gray-800 mb-2">Rotation Matrix Lab</h1>
+        <p class="text-gray-600">Master 2D transformations and trigonometry visually.</p>
+    </header>
+
+    <div class="w-full max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden flex flex-col">
+        
+        <nav class="flex border-b border-gray-200">
+            <button id="tab-quiz" class="tab-btn flex-1 py-4 text-center text-gray-500 hover:text-blue-600 transition-colors active">
+                1. Matrix Quiz
+            </button>
+            <button id="tab-trig" class="tab-btn flex-1 py-4 text-center text-gray-500 hover:text-blue-600 transition-colors">
+                2. Trig Review
+            </button>
+        </nav>
+
+        <div class="p-6 md:p-8 flex-grow">
+            <div id="module-quiz" class="block">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    <!-- Left Column: Controls & Input -->
+                    <div class="flex flex-col gap-6">
+                        <div class="bg-blue-50 p-5 rounded-lg border border-blue-100">
+                            <h2 class="text-xl font-semibold mb-3 text-blue-800">Your Challenge</h2>
+                            <div class="flex items-end gap-4 mb-4">
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-1">Target Angle (&theta;):</p>
+                                    <div class="text-3xl font-bold text-gray-900" id="target-angle-display">0&deg;</div>
+                                </div>
+                                <button id="btn-generate" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md shadow transition-colors text-sm font-medium">
+                                    New Random Angle
+                                </button>
+                            </div>
+                            
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                <span class="text-sm text-gray-600 self-center mr-2">Presets:</span>
+                                <button class="preset-btn px-2 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-100" data-angle="30">30&deg;</button>
+                                <button class="preset-btn px-2 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-100" data-angle="45">45&deg;</button>
+                                <button class="preset-btn px-2 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-100" data-angle="60">60&deg;</button>
+                                <button class="preset-btn px-2 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-100" data-angle="90">90&deg;</button>
+                                <button class="preset-btn px-2 py-1 bg-white border border-gray-300 rounded text-sm hover:bg-gray-100" data-angle="-90">-90&deg;</button>
+                            </div>
+
+                            <div class="flex items-center gap-2 text-sm text-gray-600">
+                                <span>Unit:</span>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="angle-unit" value="deg" checked class="mr-1"> Degrees
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="angle-unit" value="rad" class="mr-1"> Radians
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                            <h3 class="text-lg font-medium mb-4">Enter Rotation Matrix</h3>
+                            <p class="text-sm text-gray-600 mb-4">Construct the 2x2 matrix to rotate the vector by <span id="hint-angle">0&deg;</span>.</p>
+                            
+                            <div class="flex items-center justify-center mb-6">
+                                <div class="text-xl mr-2 font-serif text-gray-700">R = </div>
+                                <div class="matrix-bracket flex flex-col gap-2 p-2">
+                                    <div class="flex gap-2">
+                                        <input type="number" id="m00" step="0.01" class="w-20 p-2 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="cos(&theta;)">
+                                        <input type="number" id="m01" step="0.01" class="w-20 p-2 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="-sin(&theta;)">
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <input type="number" id="m10" step="0.01" class="w-20 p-2 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="sin(&theta;)">
+                                        <input type="number" id="m11" step="0.01" class="w-20 p-2 text-center border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="cos(&theta;)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-3 justify-center">
+                                <button id="btn-check" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md shadow transition-colors font-medium">
+                                    Check Answer
+                                </button>
+                                <button id="btn-reset-matrix" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-md transition-colors font-medium">
+                                    Reset
+                                </button>
+                            </div>
+                            
+                            <div id="feedback-area" class="mt-4 p-3 rounded-md hidden"></div>
+                        </div>
+
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                             <h3 class="text-md font-medium mb-2">Original Vector (v)</h3>
+                             <div class="flex items-center gap-4">
+                                 <div class="flex items-center gap-2">
+                                    <label for="vec-x" class="text-sm font-serif italic text-gray-700">x:</label>
+                                    <input type="number" id="vec-x" value="1" step="0.5" class="w-16 p-1 text-center border border-gray-300 rounded text-sm">
+                                 </div>
+                                 <div class="flex items-center gap-2">
+                                    <label for="vec-y" class="text-sm font-serif italic text-gray-700">y:</label>
+                                    <input type="number" id="vec-y" value="0" step="0.5" class="w-16 p-1 text-center border border-gray-300 rounded text-sm">
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col">
+                        <div class="flex justify-between items-end mb-2">
+                            <h2 class="text-xl font-semibold text-gray-800">Visualization</h2>
+                            <div class="flex gap-4 text-xs">
+                                <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-gray-400"></span> Original Vector</div>
+                                <div class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-blue-500"></span> Target Vector</div>
+                                <div class="flex items-center gap-1"><span class="w-3 h-3 border-2 border-dashed border-red-500"></span> Your Vector</div>
+                            </div>
+                        </div>
+                        <div class="canvas-container border border-gray-300">
+                            <canvas id="quiz-canvas"></canvas>
+                        </div>
+                        <div id="solution-panel" class="mt-4 bg-yellow-50 p-4 rounded-lg border border-yellow-200 hidden">
+                            <h3 class="font-medium text-yellow-800 mb-2">Correct Matrix Structure:</h3>
+                            <div class="flex items-center gap-4">
+                                <div class="matrix-bracket flex flex-col p-1 text-sm bg-white">
+                                    <div class="flex"><div class="w-16 text-center text-blue-700">cos(&theta;)</div><div class="w-16 text-center text-red-600">-sin(&theta;)</div></div>
+                                    <div class="flex"><div class="w-16 text-center text-red-600">sin(&theta;)</div><div class="w-16 text-center text-blue-700">cos(&theta;)</div></div>
+                                </div>
+                                <div class="text-xl text-gray-500">&rarr;</div>
+                                <div class="matrix-bracket flex flex-col p-1 text-sm bg-white" id="correct-values-display">
+                                    <!-- Values injected via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="module-trig" class="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    <!-- Left: Unit Circle Canvas -->
+                    <div class="flex flex-col">
+                        <h2 class="text-xl font-semibold mb-4 text-gray-800">Unit Circle Visualization</h2>
+                        <div class="canvas-container border border-gray-300">
+                            <canvas id="trig-canvas"></canvas>
+                        </div>
+                        
+                        <div class="mt-6 bg-gray-50 p-5 rounded-lg border border-gray-200">
+                            <label for="angle-slider" class="block text-sm font-medium text-gray-700 mb-2">
+                                Adjust Angle (&theta;): <span id="slider-val-display" class="font-bold text-blue-600">45&deg;</span>
+                            </label>
+                            <input type="range" id="angle-slider" min="-360" max="360" value="45" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>-360&deg;</span><span>0&deg;</span><span>360&deg;</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-6">
+                        <div class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                            <h3 class="text-lg font-medium mb-4">Live Values</h3>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="text-center p-3 rounded bg-blue-50 border border-blue-100">
+                                    <div class="text-sm font-semibold text-blue-800 mb-1">Cosine (x)</div>
+                                    <div class="text-xs text-gray-500 mb-2">Horizontal Projection</div>
+                                    <div class="text-xl font-mono" id="val-cos">0.707</div>
+                                </div>
+                                <div class="text-center p-3 rounded bg-red-50 border border-red-100">
+                                    <div class="text-sm font-semibold text-red-800 mb-1">Sine (y)</div>
+                                    <div class="text-xs text-gray-500 mb-2">Vertical Projection</div>
+                                    <div class="text-xl font-mono" id="val-sin">0.707</div>
+                                </div>
+                                <div class="text-center p-3 rounded bg-green-50 border border-green-100">
+                                    <div class="text-sm font-semibold text-green-800 mb-1">Tangent (y/x)</div>
+                                    <div class="text-xs text-gray-500 mb-2">Slope</div>
+                                    <div class="text-xl font-mono" id="val-tan">1.000</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex-grow flex flex-col">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="text-lg font-medium">Function Plots</h3>
+                                <div class="flex gap-3 text-sm">
+                                    <label class="flex items-center gap-1 cursor-pointer text-blue-700">
+                                        <input type="checkbox" id="show-cos" checked> cos(&theta;)
+                                    </label>
+                                    <label class="flex items-center gap-1 cursor-pointer text-red-700">
+                                        <input type="checkbox" id="show-sin" checked> sin(&theta;)
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="bg-white border border-gray-300 rounded-lg p-2 h-48 relative">
+                                <canvas id="plot-canvas" class="w-full h-full rounded"></canvas>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-2">
+                                Notice how cosine (blue) starts at 1, while sine (red) starts at 0. The rotation matrix uses these functions to blend the x and y coordinates.
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Shared State ---
+        const TOLERANCE = 0.05; // Tolerance for checking matrix entries
+        
+        // Tab switching logic
+        const tabQuiz = document.getElementById('tab-quiz');
+        const tabTrig = document.getElementById('tab-trig');
+        const modQuiz = document.getElementById('module-quiz');
+        const modTrig = document.getElementById('module-trig');
+
+        tabQuiz.addEventListener('click', () => {
+            tabQuiz.classList.add('active');
+            tabTrig.classList.remove('active');
+            modQuiz.classList.remove('hidden');
+            modTrig.classList.add('hidden');
+            resizeCanvases(); // Ensure canvases size correctly when shown
+        });
+
+        tabTrig.addEventListener('click', () => {
+            tabTrig.classList.add('active');
+            tabQuiz.classList.remove('active');
+            modTrig.classList.remove('hidden');
+            modQuiz.classList.add('hidden');
+            resizeCanvases();
+        });
+
+        // --- Module 1: Quiz Logic ---
+        let targetAngleDeg = 45; // Default
+        let useRadians = false;
+        
+        // Original vector
+        let vx = 1;
+        let vy = 0;
+
+        // Student's entered matrix
+        let studentMatrix = null;
+
+        // Elements
+        const elTargetAngle = document.getElementById('target-angle-display');
+        const elHintAngle = document.getElementById('hint-angle');
+        const inputM00 = document.getElementById('m00');
+        const inputM01 = document.getElementById('m01');
+        const inputM10 = document.getElementById('m10');
+        const inputM11 = document.getElementById('m11');
+        const btnGenerate = document.getElementById('btn-generate');
+        const btnCheck = document.getElementById('btn-check');
+        const btnReset = document.getElementById('btn-reset-matrix');
+        const feedbackArea = document.getElementById('feedback-area');
+        const solutionPanel = document.getElementById('solution-panel');
+        const elCorrectVals = document.getElementById('correct-values-display');
+        
+        const inputVecX = document.getElementById('vec-x');
+        const inputVecY = document.getElementById('vec-y');
+
+        const radioUnits = document.getElementsByName('angle-unit');
+
+        // Canvas 1 Context
+        const canvasQuiz = document.getElementById('quiz-canvas');
+        const ctxQuiz = canvasQuiz.getContext('2d');
+
+        function degToRad(deg) { return deg * Math.PI / 180; }
+        function radToDeg(rad) { return rad * 180 / Math.PI; }
+        
+        function formatAngle(deg) {
+            if (useRadians) {
+                // Formatting common radian fractions roughly
+                const rad = degToRad(deg);
+                return rad.toFixed(2) + " rad";
+            }
+            return deg + "&deg;";
+        }
+
+        function updateQuizState() {
+            elTargetAngle.innerHTML = formatAngle(targetAngleDeg);
+            elHintAngle.innerHTML = formatAngle(targetAngleDeg);
+            
+            // Clear student inputs when angle changes
+            inputM00.value = ''; inputM01.value = '';
+            inputM10.value = ''; inputM11.value = '';
+            studentMatrix = null;
+            
+            feedbackArea.classList.add('hidden');
+            solutionPanel.classList.add('hidden');
+            
+            vx = parseFloat(inputVecX.value) || 0;
+            vy = parseFloat(inputVecY.value) || 0;
+
+            drawQuizCanvas();
+        }
+
+        function generateRandomAngle() {
+            // Generate readable angles: multiples of 15 between -180 and 180
+            const multiples = [];
+            for(let i = -12; i <= 12; i++) {
+                if (i !== 0) multiples.push(i * 15);
+            }
+            const randomIdx = Math.floor(Math.random() * multiples.length);
+            targetAngleDeg = multiples[randomIdx];
+            updateQuizState();
+        }
+
+        function checkAnswer() {
+            const rad = degToRad(targetAngleDeg);
+            const c = Math.cos(rad);
+            const s = Math.sin(rad);
+
+            // The true rotation matrix
+            const trueM00 = c;   const trueM01 = -s;
+            const trueM10 = s;   const trueM11 = c;
+
+            // Get student values
+            const s00 = parseFloat(inputM00.value);
+            const s01 = parseFloat(inputM01.value);
+            const s10 = parseFloat(inputM10.value);
+            const s11 = parseFloat(inputM11.value);
+
+            // Validate inputs are numbers
+            if (isNaN(s00) || isNaN(s01) || isNaN(s10) || isNaN(s11)) {
+                showFeedback("Please enter all four numbers.", "error");
+                return;
+            }
+
+            // Save student matrix for drawing
+            studentMatrix = [s00, s01, s10, s11];
+
+            // Check against true matrix with tolerance
+            const is00Correct = Math.abs(s00 - trueM00) <= TOLERANCE;
+            const is01Correct = Math.abs(s01 - trueM01) <= TOLERANCE;
+            const is10Correct = Math.abs(s10 - trueM10) <= TOLERANCE;
+            const is11Correct = Math.abs(s11 - trueM11) <= TOLERANCE;
+
+            inputM00.style.borderColor = is00Correct ? 'green' : 'red';
+            inputM01.style.borderColor = is01Correct ? 'green' : 'red';
+            inputM10.style.borderColor = is10Correct ? 'green' : 'red';
+            inputM11.style.borderColor = is11Correct ? 'green' : 'red';
+
+            if (is00Correct && is01Correct && is10Correct && is11Correct) {
+                showFeedback("Great job! Your matrix is correct.", "success");
+            } else {
+                showFeedback("Not quite. Check the formulas and try again. Ensure you have the correct signs.", "error");
+            }
+
+            // Show solution panel
+            solutionPanel.classList.remove('hidden');
+            elCorrectVals.innerHTML = `
+                <div class="flex"><div class="w-16 text-center text-blue-700">${trueM00.toFixed(3)}</div><div class="w-16 text-center text-red-600">${trueM01.toFixed(3)}</div></div>
+                <div class="flex"><div class="w-16 text-center text-red-600">${trueM10.toFixed(3)}</div><div class="w-16 text-center text-blue-700">${trueM11.toFixed(3)}</div></div>
+            `;
+
+            drawQuizCanvas();
+        }
+
+        function showFeedback(msg, type) {
+            feedbackArea.textContent = msg;
+            feedbackArea.classList.remove('hidden', 'bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
+            if (type === 'error') {
+                feedbackArea.classList.add('bg-red-100', 'text-red-800');
+            } else {
+                feedbackArea.classList.add('bg-green-100', 'text-green-800');
+            }
+        }
+
+        function resetMatrixInputs() {
+            inputM00.value = ''; inputM01.value = '';
+            inputM10.value = ''; inputM11.value = '';
+            inputM00.style.borderColor = ''; inputM01.style.borderColor = '';
+            inputM10.style.borderColor = ''; inputM11.style.borderColor = '';
+            studentMatrix = null;
+            feedbackArea.classList.add('hidden');
+            solutionPanel.classList.add('hidden');
+            drawQuizCanvas();
+        }
+
+        btnGenerate.addEventListener('click', generateRandomAngle);
+        btnCheck.addEventListener('click', checkAnswer);
+        btnReset.addEventListener('click', resetMatrixInputs);
+        
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                targetAngleDeg = parseInt(e.target.dataset.angle);
+                updateQuizState();
+            });
+        });
+
+        Array.from(radioUnits).forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                useRadians = e.target.value === 'rad';
+                updateQuizState();
+            });
+        });
+
+        [inputVecX, inputVecY].forEach(input => {
+            input.addEventListener('input', () => {
+                vx = parseFloat(inputVecX.value) || 0;
+                vy = parseFloat(inputVecY.value) || 0;
+                drawQuizCanvas();
+            });
+        });
+
+        function drawGrid(ctx, w, h, scale) {
+            ctx.beginPath();
+            ctx.strokeStyle = '#e5e7eb'; // gray-200
+            ctx.lineWidth = 1;
+            
+            // Vertical lines
+            for (let x = -w/2; x <= w/2; x += scale) {
+                ctx.moveTo(x, -h/2);
+                ctx.lineTo(x, h/2);
+            }
+            // Horizontal lines
+            for (let y = -h/2; y <= h/2; y += scale) {
+                ctx.moveTo(-w/2, y);
+                ctx.lineTo(w/2, y);
+            }
+            ctx.stroke();
+
+            // Axes
+            ctx.beginPath();
+            ctx.strokeStyle = '#9ca3af'; // gray-400
+            ctx.lineWidth = 2;
+            ctx.moveTo(-w/2, 0); ctx.lineTo(w/2, 0); // X axis
+            ctx.moveTo(0, -h/2); ctx.lineTo(0, h/2); // Y axis
+            ctx.stroke();
+        }
+
+        function drawArrow(ctx, fromX, fromY, toX, toY, color, isDashed=false, label='') {
+            const headlen = 10;
+            const dx = toX - fromX;
+            const dy = toY - fromY;
+            const angle = Math.atan2(dy, dx);
+            
+            ctx.beginPath();
+            if (isDashed) {
+                ctx.setLineDash([5, 5]);
+                ctx.lineWidth = 2;
+            } else {
+                ctx.setLineDash([]);
+                ctx.lineWidth = 3;
+            }
+            ctx.strokeStyle = color;
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.stroke();
+            
+            // Draw head
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.lineTo(toX, toY);
+            ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.fillStyle = color;
+            ctx.fill();
+
+            // Label
+            if (label) {
+                ctx.fillStyle = color;
+                ctx.font = "14px Inter";
+                // Offset label a bit from the tip
+                ctx.fillText(label, toX + 10 * Math.cos(angle), toY + 10 * Math.sin(angle));
+            }
+        }
+
+        function drawQuizCanvas() {
+            const w = canvasQuiz.width;
+            const h = canvasQuiz.height;
+            ctxQuiz.clearRect(0, 0, w, h);
+            
+            // We want the viewable area to roughly go from -3 to 3
+            const gridLimit = 3;
+            const scale = (w / 2) / gridLimit; // pixels per unit
+
+            ctxQuiz.save();
+            // Move origin to center and flip Y axis so positive is up
+            ctxQuiz.translate(w / 2, h / 2);
+            ctxQuiz.scale(1, -1);
+
+            drawGrid(ctxQuiz, w, h, scale);
+
+            // 1. Draw Original Vector
+            const drawVx = vx * scale;
+            const drawVy = vy * scale;
+            drawArrow(ctxQuiz, 0, 0, drawVx, drawVy, '#9ca3af', false); // Gray
+            
+            // Flip text back for drawing labels correctly
+            ctxQuiz.save();
+            ctxQuiz.scale(1, -1);
+            ctxQuiz.fillStyle = '#6b7280';
+            ctxQuiz.fillText("v", drawVx, -drawVy - 10);
+            ctxQuiz.restore();
+
+            // 2. Draw Target Rotated Vector
+            const rad = degToRad(targetAngleDeg);
+            const trueC = Math.cos(rad);
+            const trueS = Math.sin(rad);
+            const targetX = (trueC * vx - trueS * vy) * scale;
+            const targetY = (trueS * vx + trueC * vy) * scale;
+            
+            drawArrow(ctxQuiz, 0, 0, targetX, targetY, '#3b82f6', false); // Blue
+            
+            ctxQuiz.save();
+            ctxQuiz.scale(1, -1);
+            ctxQuiz.fillStyle = '#2563eb';
+            ctxQuiz.fillText("v'", targetX, -targetY - 10);
+            ctxQuiz.restore();
+
+            // Draw arc for angle
+            const startAngle = Math.atan2(vy, vx);
+            const endAngle = startAngle + rad;
+            ctxQuiz.beginPath();
+            ctxQuiz.strokeStyle = 'rgba(59, 130, 246, 0.5)'; // faint blue
+            ctxQuiz.lineWidth = 20;
+            // Canvas arc draws clockwise, our math is counter-clockwise, so swap signs since context is Y-flipped
+            if (rad > 0) {
+                 ctxQuiz.arc(0, 0, scale * 0.5, startAngle, endAngle, false);
+            } else {
+                 ctxQuiz.arc(0, 0, scale * 0.5, startAngle, endAngle, true);
+            }
+            ctxQuiz.stroke();
+
+            // 3. Draw Student Vector if matrix exists
+            if (studentMatrix) {
+                const [s00, s01, s10, s11] = studentMatrix;
+                const studX = (s00 * vx + s01 * vy) * scale;
+                const studY = (s10 * vx + s11 * vy) * scale;
+                
+                // Red dashed line
+                drawArrow(ctxQuiz, 0, 0, studX, studY, '#ef4444', true);
+            }
+
+            ctxQuiz.restore();
+        }
+
+        // --- Module 2: Trig Review Logic ---
+        
+        let trigAngleDeg = 45;
+        const sliderTrig = document.getElementById('angle-slider');
+        const displaySliderVal = document.getElementById('slider-val-display');
+        const valCos = document.getElementById('val-cos');
+        const valSin = document.getElementById('val-sin');
+        const valTan = document.getElementById('val-tan');
+        const chkCos = document.getElementById('show-cos');
+        const chkSin = document.getElementById('show-sin');
+        
+        const canvasTrig = document.getElementById('trig-canvas');
+        const ctxTrig = canvasTrig.getContext('2d');
+        const canvasPlot = document.getElementById('plot-canvas');
+        const ctxPlot = canvasPlot.getContext('2d');
+
+        sliderTrig.addEventListener('input', (e) => {
+            trigAngleDeg = parseInt(e.target.value);
+            updateTrigState();
+        });
+
+        chkCos.addEventListener('change', drawPlotCanvas);
+        chkSin.addEventListener('change', drawPlotCanvas);
+
+        function updateTrigState() {
+            displaySliderVal.innerHTML = trigAngleDeg + '&deg;';
+            const rad = degToRad(trigAngleDeg);
+            const c = Math.cos(rad);
+            const s = Math.sin(rad);
+            const t = Math.tan(rad);
+
+            valCos.textContent = c.toFixed(3);
+            valSin.textContent = s.toFixed(3);
+            
+            // Handle tangent infinity
+            if (Math.abs(c) < 0.0001) {
+                valTan.textContent = "undefined";
+            } else {
+                valTan.textContent = t.toFixed(3);
+            }
+
+            drawTrigCanvas();
+            drawPlotCanvas();
+        }
+
+        function drawTrigCanvas() {
+            const w = canvasTrig.width;
+            const h = canvasTrig.height;
+            ctxTrig.clearRect(0, 0, w, h);
+            
+            const gridLimit = 1.5;
+            const scale = (w / 2) / gridLimit;
+
+            ctxTrig.save();
+            ctxTrig.translate(w / 2, h / 2);
+            ctxTrig.scale(1, -1);
+
+            drawGrid(ctxTrig, w, h, scale);
+
+            // Unit Circle
+            ctxTrig.beginPath();
+            ctxTrig.strokeStyle = '#d1d5db'; // gray-300
+            ctxTrig.lineWidth = 2;
+            ctxTrig.arc(0, 0, scale, 0, 2*Math.PI);
+            ctxTrig.stroke();
+
+            const rad = degToRad(trigAngleDeg);
+            const px = Math.cos(rad) * scale;
+            const py = Math.sin(rad) * scale;
+
+            // Draw Triangle (Cosine projection)
+            ctxTrig.beginPath();
+            ctxTrig.strokeStyle = '#1d4ed8'; // blue-700
+            ctxTrig.lineWidth = 3;
+            ctxTrig.moveTo(0, 0);
+            ctxTrig.lineTo(px, 0);
+            ctxTrig.stroke();
+
+            // Draw Triangle (Sine projection)
+            ctxTrig.beginPath();
+            ctxTrig.strokeStyle = '#b91c1c'; // red-700
+            ctxTrig.lineWidth = 3;
+            ctxTrig.moveTo(px, 0);
+            ctxTrig.lineTo(px, py);
+            ctxTrig.stroke();
+
+            // Draw Hypotenuse (Radius)
+            ctxTrig.beginPath();
+            ctxTrig.strokeStyle = '#374151'; // gray-700
+            ctxTrig.lineWidth = 2;
+            ctxTrig.moveTo(0, 0);
+            ctxTrig.lineTo(px, py);
+            ctxTrig.stroke();
+
+            // Point on circle
+            ctxTrig.beginPath();
+            ctxTrig.fillStyle = '#000';
+            ctxTrig.arc(px, py, 4, 0, 2*Math.PI);
+            ctxTrig.fill();
+
+            // Arc
+            ctxTrig.beginPath();
+            ctxTrig.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctxTrig.lineWidth = 10;
+            if(rad > 0) ctxTrig.arc(0, 0, scale*0.3, 0, rad, false);
+            else ctxTrig.arc(0, 0, scale*0.3, 0, rad, true);
+            ctxTrig.stroke();
+
+            // Labels
+            ctxTrig.save();
+            ctxTrig.scale(1, -1);
+            ctxTrig.font = "bold 14px Inter";
+            
+            // Cosine label (blue)
+            ctxTrig.fillStyle = '#1d4ed8';
+            ctxTrig.fillText("cos", px/2, 15 * (py >= 0 ? 1 : -1));
+            
+            // Sine label (red)
+            ctxTrig.fillStyle = '#b91c1c';
+            ctxTrig.fillText("sin", px + (px >= 0 ? 5 : -25), -py/2);
+            
+            ctxTrig.restore();
+
+            ctxTrig.restore();
+        }
+
+        function drawPlotCanvas() {
+            const w = canvasPlot.width;
+            const h = canvasPlot.height;
+            ctxPlot.clearRect(0, 0, w, h);
+
+            const showC = chkCos.checked;
+            const showS = chkSin.checked;
+
+            // X ranges from -360 to 360
+            const minX = -360;
+            const maxX = 360;
+            // Y ranges from -1.2 to 1.2
+            const minY = -1.2;
+            const maxY = 1.2;
+
+            function mapX(deg) { return ((deg - minX) / (maxX - minX)) * w; }
+            function mapY(val) { return h - ((val - minY) / (maxY - minY)) * h; }
+
+            // Axes
+            ctxPlot.beginPath();
+            ctxPlot.strokeStyle = '#d1d5db'; // gray-300
+            ctxPlot.lineWidth = 1;
+            ctxPlot.moveTo(0, mapY(0)); ctxPlot.lineTo(w, mapY(0)); // X axis
+            ctxPlot.moveTo(mapX(0), 0); ctxPlot.lineTo(mapX(0), h); // Y axis
+            ctxPlot.stroke();
+
+            // Grid markers X (every 90 deg)
+            ctxPlot.fillStyle = '#9ca3af';
+            ctxPlot.font = "10px Inter";
+            for(let d = -360; d <= 360; d+=90) {
+                const x = mapX(d);
+                ctxPlot.beginPath();
+                ctxPlot.moveTo(x, mapY(0)-3); ctxPlot.lineTo(x, mapY(0)+3);
+                ctxPlot.stroke();
+                if(d !== 0) {
+                    ctxPlot.fillText(d+"°", x-10, mapY(0)+12);
+                }
+            }
+
+            // Draw Waves
+            ctxPlot.lineWidth = 2;
+            
+            if (showC) {
+                ctxPlot.beginPath();
+                ctxPlot.strokeStyle = '#1d4ed8'; // blue
+                for(let d = minX; d <= maxX; d++) {
+                    const x = mapX(d);
+                    const y = mapY(Math.cos(degToRad(d)));
+                    if (d === minX) ctxPlot.moveTo(x, y);
+                    else ctxPlot.lineTo(x, y);
+                }
+                ctxPlot.stroke();
+            }
+
+            if (showS) {
+                ctxPlot.beginPath();
+                ctxPlot.strokeStyle = '#b91c1c'; // red
+                for(let d = minX; d <= maxX; d++) {
+                    const x = mapX(d);
+                    const y = mapY(Math.sin(degToRad(d)));
+                    if (d === minX) ctxPlot.moveTo(x, y);
+                    else ctxPlot.lineTo(x, y);
+                }
+                ctxPlot.stroke();
+            }
+
+            // Draw current angle marker
+            const currX = mapX(trigAngleDeg);
+            ctxPlot.beginPath();
+            ctxPlot.strokeStyle = '#374151';
+            ctxPlot.setLineDash([4, 4]);
+            ctxPlot.moveTo(currX, 0);
+            ctxPlot.lineTo(currX, h);
+            ctxPlot.stroke();
+            ctxPlot.setLineDash([]);
+
+            // Marker points
+            if (showC) {
+                ctxPlot.beginPath();
+                ctxPlot.fillStyle = '#1d4ed8';
+                ctxPlot.arc(currX, mapY(Math.cos(degToRad(trigAngleDeg))), 4, 0, 2*Math.PI);
+                ctxPlot.fill();
+            }
+            if (showS) {
+                ctxPlot.beginPath();
+                ctxPlot.fillStyle = '#b91c1c';
+                ctxPlot.arc(currX, mapY(Math.sin(degToRad(trigAngleDeg))), 4, 0, 2*Math.PI);
+                ctxPlot.fill();
+            }
+        }
+
+        function resizeCanvases() {
+            // Resize Canvas based on container width to keep it sharp
+            const containers = document.querySelectorAll('.canvas-container');
+            containers.forEach(container => {
+                const canvas = container.querySelector('canvas');
+                // Canvas visual size is 100% of container via CSS
+                // Set actual internal resolution to match container width
+                const rect = container.getBoundingClientRect();
+                // Avoid setting width to 0 if hidden
+                if (rect.width > 0) {
+                    // For the plot canvas, we want it rectangular, not 1:1
+                    if (canvas.id === 'plot-canvas') {
+                        const parentRect = canvas.parentElement.getBoundingClientRect();
+                        canvas.width = parentRect.width;
+                        canvas.height = parentRect.height;
+                    } else {
+                        canvas.width = rect.width;
+                        canvas.height = rect.height; // Because 1:1 aspect ratio in CSS
+                    }
+                }
+            });
+            
+            // Redraw content
+            if (!modQuiz.classList.contains('hidden')) drawQuizCanvas();
+            if (!modTrig.classList.contains('hidden')) {
+                drawTrigCanvas();
+                drawPlotCanvas();
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvases);
+
+        // Initial setup
+        window.onload = function() {
+            // Slight delay to ensure layout is done before getting dimensions
+            setTimeout(() => {
+                resizeCanvases();
+                updateQuizState();
+                updateTrigState();
+            }, 50);
+        };
+
+    </script>
+</body>
+</html>
