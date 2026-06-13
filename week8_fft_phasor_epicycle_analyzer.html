@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFT Kinematic Epicycle & Phasor Analyzer</title>
+    <!-- Tailwind CSS for high-fidelity UI styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls for full 3D viewport navigation -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <style>
+        /* Modern cyber-grid theme styling */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+        }
+        /* Custom scrollbar for desktop panel fallback */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-[#090d16] text-slate-100 lg:h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 overflow-x-hidden lg:overflow-hidden">
+
+    <!-- Header Navigation Bar (Compact) -->
+    <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md px-6 py-2.5 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50 flex-shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 via-blue-600 to-pink-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="font-extrabold text-sm tracking-tight bg-gradient-to-r from-cyan-400 via-sky-400 to-pink-400 bg-clip-text text-transparent">
+                    Fourier Kinematic Epicycle Analyzer
+                </h1>
+                <p class="text-[10px] text-slate-400">FFT Signal Synthesis & Phasor Rotation in 3D Space</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4 text-xs">
+            <div class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span class="text-slate-300 font-mono text-[10px]" id="fps-counter">DSP Engine: Active</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Workspace -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 max-w-[1920px] mx-auto w-full min-h-0 overflow-hidden">
+        
+        <!-- Left Side: Interactive Kinematic Canvas & Controls (Col span 7) -->
+        <section class="lg:col-span-7 flex flex-col gap-4 h-full min-h-0">
+            
+            <!-- Three.js Viewport Wrapper (Fills remaining height perfectly) -->
+            <div class="relative glass-panel rounded-2xl overflow-hidden shadow-2xl group flex-1 min-h-0 flex flex-col">
+                <!-- Action toolbar overlay -->
+                <div class="absolute top-3 left-3 z-10 flex gap-2">
+                    <button id="btn-camera-reset" class="px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700/50 text-[10px] font-semibold flex items-center gap-1 transition-all text-slate-300">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        3D Perspective Orbit
+                    </button>
+                    <button id="btn-camera-2d" class="px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700/50 text-[10px] font-semibold flex items-center gap-1 transition-all text-slate-300">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        2D Orthogonal View
+                    </button>
+                </div>
+                
+                <div class="absolute top-3 right-3 z-10 flex gap-2">
+                    <button id="btn-reset-trail" class="px-2.5 py-1 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 text-[10px] font-semibold flex items-center gap-1 transition-all text-red-300">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        Clear Trail
+                    </button>
+                </div>
+
+                <!-- Real-time overlay metrics -->
+                <div class="absolute bottom-3 left-3 z-10 glass-panel px-3 py-2 rounded-xl border border-slate-700/30 text-[10px] font-mono flex flex-col gap-0.5">
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                        <span class="text-slate-400">x(t) Measured:</span>
+                        <span id="coord-xt" class="text-cyan-400 font-bold">0.000</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 rounded-full bg-pink-400"></span>
+                        <span class="text-slate-400">y(t) Ideal:</span>
+                        <span id="coord-yt" class="text-pink-400 font-bold">0.000</span>
+                    </div>
+                </div>
+
+                <!-- Canvas hosting the Three.js viewport (Takes 100% space) -->
+                <div id="three-container" class="w-full h-full bg-[#070b12] relative cursor-grab active:cursor-grabbing flex-1"></div>
+            </div>
+
+            <!-- Sleek Control Panel (Fixed Height) -->
+            <div class="glass-panel p-4 rounded-2xl flex flex-col gap-3 flex-shrink-0">
+                <div class="flex justify-between items-center border-b border-slate-800/80 pb-2">
+                    <h2 class="font-bold text-xs uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+                        Parameter Controller
+                    </h2>
+                    <div class="flex items-center gap-2">
+                        <button id="btn-play" class="p-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all font-semibold flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                            <!-- Pause icon initially since it autoplays -->
+                            <svg id="play-icon" class="w-3.5 h-3.5 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            <svg id="pause-icon" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    
+                    <!-- Arm 1 Controls -->
+                    <div class="flex flex-col gap-2 p-3 rounded-xl bg-slate-900/50 border border-sky-900/20">
+                        <h3 class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-cyan-400 inline-block shadow"></span>
+                            Primary Phasor (Arm 1)
+                        </h3>
+                        
+                        <!-- L1 Slider -->
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between text-[11px]">
+                                <span class="text-slate-400">Length (L₁)</span>
+                                <span class="text-cyan-400 font-mono font-bold" id="label-L1">2.00</span>
+                            </div>
+                            <input type="range" id="slider-L1" min="0" max="4" step="0.1" value="2.0" class="w-full accent-cyan-400 cursor-pointer h-1 bg-slate-800 rounded appearance-none">
+                        </div>
+
+                        <!-- f1 Slider -->
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between text-[11px]">
+                                <span class="text-slate-400">Frequency (f₁)</span>
+                                <span class="text-cyan-400 font-mono font-bold" id="label-f1">1.00 Hz</span>
+                            </div>
+                            <input type="range" id="slider-f1" min="0.1" max="15" step="0.1" value="1.0" class="w-full accent-cyan-400 cursor-pointer h-1 bg-slate-800 rounded appearance-none">
+                        </div>
+                    </div>
+
+                    <!-- Arm 2 Controls -->
+                    <div class="flex flex-col gap-2 p-3 rounded-xl bg-slate-900/50 border border-pink-900/20">
+                        <h3 class="text-[10px] font-bold uppercase tracking-wider text-pink-400 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-pink-500 inline-block shadow"></span>
+                            Secondary Phasor (Arm 2)
+                        </h3>
+
+                        <!-- L2 Slider -->
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between text-[11px]">
+                                <span class="text-slate-400">Length (L₂)</span>
+                                <span class="text-pink-400 font-mono font-bold" id="label-L2">1.00</span>
+                            </div>
+                            <input type="range" id="slider-L2" min="0" max="4" step="0.1" value="1.0" class="w-full accent-pink-500 cursor-pointer h-1 bg-slate-800 rounded appearance-none">
+                        </div>
+
+                        <!-- f2 Slider -->
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between text-[11px]">
+                                <span class="text-slate-400">Frequency (f₂)</span>
+                                <span class="text-pink-400 font-mono font-bold" id="label-f2">3.50 Hz</span>
+                            </div>
+                            <input type="range" id="slider-f2" min="-15" max="15" step="0.1" value="3.5" class="w-full accent-pink-500 cursor-pointer h-1 bg-slate-800 rounded appearance-none">
+                        </div>
+                    </div>
+
+                    <!-- Noise / Measurement Interference Controls -->
+                    <div class="flex flex-col gap-2 p-3 rounded-xl bg-slate-900/50 border border-amber-900/20">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-amber-500 inline-block shadow animate-pulse"></span>
+                                Measurement Noise
+                            </h3>
+                            <label class="flex items-center gap-1 cursor-pointer select-none">
+                                <input type="checkbox" id="checkbox-noise" class="accent-amber-500 h-3 w-3 rounded cursor-pointer">
+                                <span class="text-[9px] text-slate-400 font-bold uppercase">Active</span>
+                            </label>
+                        </div>
+
+                        <!-- Noise Magnitude Slider -->
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between text-[11px]">
+                                <span class="text-slate-400">Magnitude (A_n)</span>
+                                <span class="text-amber-400 font-mono font-bold" id="label-noiseAmp">0.50</span>
+                            </div>
+                            <input type="range" id="slider-noiseAmp" min="0.0" max="2.0" step="0.05" value="0.5" class="w-full accent-amber-500 cursor-pointer h-1 bg-slate-800 rounded appearance-none" disabled>
+                        </div>
+
+                        <!-- Noise Frequency Slider -->
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between text-[11px]">
+                                <span class="text-slate-400">Frequency (f_n)</span>
+                                <span class="text-amber-400 font-mono font-bold" id="label-noiseFreq">12.00 Hz</span>
+                            </div>
+                            <input type="range" id="slider-noiseFreq" min="1" max="45" step="0.5" value="12.0" class="w-full accent-amber-500 cursor-pointer h-1 bg-slate-800 rounded appearance-none" disabled>
+                        </div>
+                    </div>
+
+                    <!-- DSP Sampling Config -->
+                    <div class="flex flex-col gap-2 p-3 rounded-xl bg-slate-900/30 border border-slate-800">
+                        <div class="flex justify-between text-[11px]">
+                            <span class="text-slate-400 font-semibold">Sampling Rate (f_s)</span>
+                            <span class="text-emerald-400 font-mono font-bold" id="label-fs">100 Hz</span>
+                        </div>
+                        <input type="range" id="slider-fs" min="20" max="500" step="10" value="100" class="w-full accent-emerald-400 cursor-pointer h-1 bg-slate-800 rounded appearance-none">
+
+                        <div class="flex items-center justify-between text-[11px] mt-0.5">
+                            <span class="text-slate-400">FFT Size (N)</span>
+                            <select id="select-N" class="bg-slate-950 border border-slate-800 rounded px-2 py-0.5 text-slate-200 font-mono font-bold focus:outline-none focus:border-cyan-500 text-xs">
+                                <option value="512">512</option>
+                                <option value="1024" selected>1024</option>
+                                <option value="2048">2048</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Physics / Simulation Speed -->
+                    <div class="flex flex-col gap-2 p-3 rounded-xl bg-slate-900/30 border border-slate-800">
+                        <div class="flex justify-between text-[11px]">
+                            <span class="text-slate-400 font-semibold">Evolution Speed</span>
+                            <span class="text-amber-400 font-mono font-bold" id="label-speed">1.00x</span>
+                        </div>
+                        <input type="range" id="slider-speed" min="0.1" max="2.0" step="0.05" value="1.0" class="w-full accent-amber-500 cursor-pointer h-1 bg-slate-800 rounded appearance-none">
+
+                        <button id="btn-reset-sim" class="mt-0.5 py-1 px-3 rounded bg-slate-950 border border-slate-800 hover:bg-slate-800 text-[10px] text-slate-300 font-semibold transition-all w-full text-center">
+                            Re-align Phasors
+                        </button>
+                    </div>
+
+                    <!-- Informational Quick Summary -->
+                    <div class="p-3 rounded-xl bg-slate-900/20 border border-slate-800/60 flex flex-col justify-center text-[10.5px] leading-relaxed text-slate-400">
+                        <p class="font-bold text-slate-300 mb-0.5">Interference Demo:</p>
+                        Adding noise mimics realistic analog sensors. White noise elevates broadband floor; sinusoidal hum introduces selective harmonic peaks.
+                    </div>
+
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Side: Diagnostics & Live Plots (Col span 5) -->
+        <section class="lg:col-span-5 flex flex-col gap-4 h-full min-h-0">
+            
+            <!-- Live Diagnostic HUD & Analysis -->
+            <div class="glass-panel p-4 rounded-2xl border-cyan-500/10 shadow-xl flex flex-col gap-2 flex-shrink-0 bg-slate-950/80">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                        <svg class="w-3.5 h-3.5 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.952 11.952 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                        </svg>
+                        Telemetry & Diagnostic HUD
+                    </h3>
+                    <span id="badge-shannon" class="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-emerald-950/20 border-emerald-800 text-emerald-400">
+                        Shannon-Nyquist: Verified
+                    </span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="px-2.5 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 flex flex-col">
+                        <span class="text-slate-500 text-[9px] uppercase font-bold">Resonances / Beats</span>
+                        <span id="diag-beating" class="font-bold text-cyan-400 font-mono text-[11px]">Async / Complex</span>
+                    </div>
+                    <div class="px-2.5 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 flex flex-col">
+                        <span class="text-slate-500 text-[9px] uppercase font-bold">Resolution ($\Delta f$)</span>
+                        <span id="diag-df" class="font-bold text-amber-400 font-mono text-[11px]">0.098 Hz</span>
+                    </div>
+                </div>
+
+                <div class="text-[11px] space-y-1 mt-1">
+                    <div class="flex items-start gap-2 bg-slate-900/20 px-2.5 py-1.5 rounded-lg border border-slate-800/55">
+                        <div class="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 flex-shrink-0"></div>
+                        <p id="diag-orbit-class" class="text-slate-300 leading-snug">Epitrochoid path. Primary arm dominates.</p>
+                    </div>
+                    <div class="flex items-start gap-2 bg-slate-900/20 px-2.5 py-1.5 rounded-lg border border-slate-800/55">
+                        <div class="w-1.5 h-1.5 rounded-full bg-pink-400 mt-1.5 flex-shrink-0"></div>
+                        <p id="diag-resolution-class" class="text-slate-300 leading-snug">Clean Spectral Isolation.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Oscilloscope Waveform (Time Domain) -->
+            <div class="glass-panel p-4 rounded-2xl shadow-2xl flex flex-col gap-2 flex-shrink-0">
+                <div class="flex justify-between items-center border-b border-slate-800/60 pb-1">
+                    <h3 class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                        x(t) Oscilloscope (Time Domain)
+                    </h3>
+                </div>
+                <!-- Compact Canvas Container -->
+                <div class="relative w-full h-[120px] bg-[#05080e] rounded-xl border border-slate-900 overflow-hidden">
+                    <canvas id="canvas-time" class="absolute inset-0 w-full h-full"></canvas>
+                </div>
+                <div class="flex justify-between items-center text-[9px] font-mono text-slate-400 px-0.5">
+                    <span id="label-scope-start">-10.24s</span>
+                    <span>now (0.0s)</span>
+                </div>
+            </div>
+
+            <!-- Discrete FFT Power Spectrum (Frequency Domain) -->
+            <div class="glass-panel p-4 rounded-2xl shadow-2xl flex flex-col gap-2 flex-shrink-0">
+                <div class="flex justify-between items-center border-b border-slate-800/60 pb-1">
+                    <h3 class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        FFT Magnitude Spectrum (Frequency Domain)
+                    </h3>
+                </div>
+                <!-- Compact Canvas Container -->
+                <div class="relative w-full h-[140px] bg-[#05080e] rounded-xl border border-slate-900 overflow-hidden">
+                    <canvas id="canvas-freq" class="absolute inset-0 w-full h-full"></canvas>
+                </div>
+                <div class="flex justify-between items-center text-[9px] font-mono text-slate-400 px-0.5">
+                    <span>0.0 Hz (DC)</span>
+                    <span id="label-spectrum-end">30.0 Hz</span>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer class="border-t border-slate-800/80 bg-slate-950/60 py-2.5 text-center text-[10px] text-slate-500 font-mono flex-shrink-0">
+        FFT Kinematic Epicycle & Phasor Engine &bull; Built with HTML5, WebGL & Three.js
+    </footer>
+
+    <!-- MAIN ENGINE IMPLEMENTATION -->
+    <script>
+        window.addEventListener("load", () => {
+            // Bind actions since page content has loaded
+            bindEventListeners();
+            initEngine();
+            // Initialize Diagnostics HUD
+            updateDiagnostics();
+            // Fire layout adjustment to stretch canvas immediately
+            onWindowResize();
+        });
+
+        // Application State
+        const state = {
+            L1: 2.0,
+            f1: 1.0,
+            L2: 1.0,
+            f2: 3.5,
+            
+            // Noise Attributes
+            noiseEnabled: false,
+            noiseAmp: 0.5,
+            noiseFreq: 12.0,
+
+            speedScale: 1.0,
+            isPlaying: true,
+            simTime: 0,
+            
+            fs: 100, // Sampling rate
+            N: 1024, // FFT window size
+            
+            xBuffer: [],
+            yBuffer: [],
+            timeBuffer: [],
+        };
+
+        // Cache handles
+        let container, renderer, scene, camera, controls;
+        let arm1Mesh, arm2Mesh, tipSphere, jointSphere, centerSphere;
+        let projectionLineX, projectionLineY, puckX, puckY;
+        let trailLine;
+        
+        let timeCanvas, timeCtx;
+        let freqCanvas, freqCtx;
+        
+        const maxTrailPoints = 1500;
+        const trailPositions = [];
+        const trailColors = [];
+
+        // Cooley-Tukey Radix-2 FFT Bit Reverse Helper
+        function bitReverse(x, bits) {
+            let y = 0;
+            for (let i = 0; i < bits; i++) {
+                y = (y << 1) | (x & 1);
+                x >>= 1;
+            }
+            return y;
+        }
+
+        // Cooley-Tukey Radix-2 FFT Algorithm
+        function performFFT(re, im) {
+            const N = re.length;
+            const bits = Math.round(Math.log2(N));
+            
+            for (let i = 0; i < N; i++) {
+                const j = bitReverse(i, bits);
+                if (i < j) {
+                    let temp = re[i]; re[i] = re[j]; re[j] = temp;
+                    temp = im[i]; im[i] = im[j]; im[j] = temp;
+                }
+            }
+            
+            for (let len = 2; len <= N; len <<= 1) {
+                const ang = 2 * Math.PI / len;
+                const wlen_re = Math.cos(ang);
+                const wlen_im = -Math.sin(ang);
+                
+                for (let i = 0; i < N; i += len) {
+                    let w_re = 1;
+                    let w_im = 0;
+                    for (let j = 0; j < len / 2; j++) {
+                        const u_re = re[i + j];
+                        const u_im = im[i + j];
+                        
+                        const idx = i + j + len / 2;
+                        const v_re = re[idx] * w_re - im[idx] * w_im;
+                        const v_im = re[idx] * w_im + im[idx] * w_re;
+                        
+                        re[i + j] = u_re + v_re;
+                        im[i + j] = u_im + v_im;
+                        re[idx] = u_re - v_re;
+                        im[idx] = u_im - v_im;
+                        
+                        const next_w_re = w_re * wlen_re - w_im * wlen_im;
+                        const next_w_im = w_re * wlen_im + w_im * wlen_re;
+                        w_re = next_w_re;
+                        w_im = next_w_im;
+                    }
+                }
+            }
+        }
+
+        let cachedHannWindow = null;
+        let cachedHannN = 0;
+        function getHannWindow(N) {
+            if (cachedHannWindow && cachedHannN === N) {
+                return cachedHannWindow;
+            }
+            const win = new Float32Array(N);
+            for (let i = 0; i < N; i++) {
+                win[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (N - 1)));
+            }
+            cachedHannWindow = win;
+            cachedHannN = N;
+            return win;
+        }
+
+        // Live HUD telemetry diagnostics logic
+        function updateDiagnostics() {
+            const nyquist = state.fs / 2;
+            const deltaF = state.fs / state.N;
+            const freqDiff = Math.abs(state.f1 - state.f2);
+            
+            const isAliased = (Math.abs(state.f1) > nyquist) || (Math.abs(state.f2) > nyquist) || (state.noiseEnabled && state.noiseFreq > nyquist);
+            const canResolve = freqDiff >= (2 * deltaF);
+            
+            const fMax = Math.max(Math.abs(state.f1), Math.abs(state.f2));
+            const fMin = Math.min(Math.abs(state.f1), Math.abs(state.f2));
+            const ratio = fMin !== 0 ? (fMax / fMin) : 0;
+            const isIntegerRatio = Math.abs(ratio - Math.round(ratio)) < 0.05;
+
+            // Update DOM
+            const shannonBadge = document.getElementById("badge-shannon");
+            if (shannonBadge) {
+                if (isAliased) {
+                    shannonBadge.textContent = "ALIASED / FOLDED";
+                    shannonBadge.className = "text-[9px] font-bold px-2 py-0.5 rounded-full border border-red-500 bg-red-950/40 text-red-400 animate-pulse";
+                } else {
+                    shannonBadge.textContent = "SHANNON-NYQUIST: PASS";
+                    shannonBadge.className = "text-[9px] font-bold px-2 py-0.5 rounded-full border border-emerald-500 bg-emerald-950/40 text-emerald-400";
+                }
+            }
+
+            const beatingEl = document.getElementById("diag-beating");
+            if (beatingEl) {
+                if (freqDiff < 1.0 && state.L1 > 0.1 && state.L2 > 0.1) {
+                    beatingEl.textContent = `${freqDiff.toFixed(2)} Hz Beat`;
+                    beatingEl.className = "font-bold text-pink-400 font-mono text-[11px]";
+                } else if (isIntegerRatio && state.f1 !== 0) {
+                    beatingEl.textContent = `1:${Math.round(ratio)} Harm`;
+                    beatingEl.className = "font-bold text-cyan-400 font-mono text-[11px]";
+                } else {
+                    beatingEl.textContent = "Async / Complex";
+                    beatingEl.className = "font-bold text-slate-400 font-mono text-[11px]";
+                }
+            }
+
+            const dfEl = document.getElementById("diag-df");
+            if (dfEl) {
+                dfEl.textContent = `${deltaF.toFixed(3)} Hz`;
+            }
+
+            const pathEl = document.getElementById("diag-orbit-class");
+            if (pathEl) {
+                if (state.L1 === 0 && state.L2 === 0) {
+                    pathEl.textContent = "Zero-length path. Core is stationary.";
+                } else if (state.L1 === 0 || state.L2 === 0) {
+                    pathEl.textContent = "Single phasor sweep: perfect circle.";
+                } else {
+                    const ratioText = isIntegerRatio ? `integral 1:${Math.round(ratio)} ratio` : "complex quasiperiodic path";
+                    if (state.L2 > state.L1) {
+                        pathEl.textContent = `Inner-looping Epicycloid (${ratioText}). Secondary arm length dominates.`;
+                    } else if (Math.abs(state.L2 - state.L1) < 0.1) {
+                        pathEl.textContent = `Symmetric cardioid rosette path. Proportions are balanced.`;
+                    } else {
+                        pathEl.textContent = `Epitrochoid path (${ratioText}). Primary arm dominates coordinates.`;
+                    }
+                }
+            }
+
+            const resEl = document.getElementById("diag-resolution-class");
+            if (resEl) {
+                if (isAliased) {
+                    resEl.textContent = `Nyquist limit violated. Fold-back spectral ghost peaks expected.`;
+                } else if (state.noiseEnabled) {
+                    resEl.textContent = `Noise injection active (${state.noiseFreq.toFixed(1)} Hz). White noise raises floor; hum introduces selective interference peak.`;
+                } else if (!canResolve && state.L1 > 0.1 && state.L2 > 0.1) {
+                    resEl.textContent = `Spectral Merging. Bin resolution width (${(deltaF * 2).toFixed(2)} Hz) exceeds arm spacing.`;
+                } else {
+                    resEl.textContent = `Clean FFT Isolation. Both arm frequencies resolved properly.`;
+                }
+            }
+        }
+
+        // Handle Event Binding & Synchronize State
+        function bindEventListeners() {
+            const bindSlider = (id, property, labelId, suffix = "") => {
+                const slider = document.getElementById(id);
+                if (!slider) return;
+                
+                slider.value = state[property];
+                const label = document.getElementById(labelId);
+                if (label) label.textContent = Number(state[property]).toFixed(2) + suffix;
+
+                slider.oninput = (e) => {
+                    const val = parseFloat(e.target.value);
+                    state[property] = val;
+                    if (label) label.textContent = val.toFixed(2) + suffix;
+                    
+                    if (property === 'fs' || property === 'noiseFreq' || property === 'noiseAmp') {
+                        flushBuffers();
+                    }
+                    updateDiagnostics();
+                };
+            };
+
+            bindSlider("slider-L1", "L1", "label-L1");
+            bindSlider("slider-f1", "f1", "label-f1", " Hz");
+            bindSlider("slider-L2", "L2", "label-L2");
+            bindSlider("slider-f2", "f2", "label-f2", " Hz");
+            bindSlider("slider-fs", "fs", "label-fs", " Hz");
+            bindSlider("slider-speed", "speedScale", "label-speed", "x");
+            
+            // Noise sliders
+            bindSlider("slider-noiseAmp", "noiseAmp", "label-noiseAmp");
+            bindSlider("slider-noiseFreq", "noiseFreq", "label-noiseFreq", " Hz");
+
+            // Noise Toggle Checkbox
+            const checkboxNoise = document.getElementById("checkbox-noise");
+            const sliderNoiseAmp = document.getElementById("slider-noiseAmp");
+            const sliderNoiseFreq = document.getElementById("slider-noiseFreq");
+            if (checkboxNoise) {
+                checkboxNoise.checked = state.noiseEnabled;
+                checkboxNoise.onchange = (e) => {
+                    state.noiseEnabled = e.target.checked;
+                    
+                    // Enable/Disable slider components visually
+                    sliderNoiseAmp.disabled = !state.noiseEnabled;
+                    sliderNoiseFreq.disabled = !state.noiseEnabled;
+                    
+                    flushBuffers();
+                    updateDiagnostics();
+                };
+            }
+
+            const selectN = document.getElementById("select-N");
+            if (selectN) {
+                selectN.value = state.N;
+                selectN.onchange = (e) => {
+                    state.N = parseInt(e.target.value);
+                    flushBuffers();
+                    updateDiagnostics();
+                };
+            }
+
+            const btnPlay = document.getElementById("btn-play");
+            const playIcon = document.getElementById("play-icon");
+            const pauseIcon = document.getElementById("pause-icon");
+            if (btnPlay) {
+                btnPlay.onclick = () => {
+                    state.isPlaying = !state.isPlaying;
+                    if (state.isPlaying) {
+                        playIcon.classList.add("hidden");
+                        pauseIcon.classList.remove("hidden");
+                    } else {
+                        playIcon.classList.remove("hidden");
+                        pauseIcon.classList.add("hidden");
+                    }
+                };
+            }
+
+            const btnResetSim = document.getElementById("btn-reset-sim");
+            if (btnResetSim) {
+                btnResetSim.onclick = () => {
+                    state.simTime = 0;
+                    flushBuffers();
+                    clearTrail();
+                    updateDiagnostics();
+                };
+            }
+
+            const btnResetTrail = document.getElementById("btn-reset-trail");
+            if (btnResetTrail) {
+                btnResetTrail.onclick = () => {
+                    clearTrail();
+                };
+            }
+
+            const btnCamReset = document.getElementById("btn-camera-reset");
+            if (btnCamReset) {
+                btnCamReset.onclick = () => {
+                    setCameraPerspective();
+                };
+            }
+
+            const btnCam2D = document.getElementById("btn-camera-2d");
+            if (btnCam2D) {
+                btnCam2D.onclick = () => {
+                    setCamera2D();
+                };
+            }
+        }
+
+        // Populate sample buffer incorporating configurable noise
+        function getNoiseValue(t) {
+            if (!state.noiseEnabled) return 0;
+            // Mixed noise: 60% periodic sinusoidal hum, 40% white noise
+            const noiseSine = Math.cos(2 * Math.PI * state.noiseFreq * t);
+            const noiseRandom = (Math.random() - 0.5) * 2;
+            return state.noiseAmp * (noiseSine * 0.6 + noiseRandom * 0.4);
+        }
+
+        function flushBuffers() {
+            state.xBuffer = [];
+            state.yBuffer = [];
+            state.timeBuffer = [];
+            
+            const dt = 1 / state.fs;
+            for (let i = state.N - 1; i >= 0; i--) {
+                const t = state.simTime - i * dt;
+                const noise = getNoiseValue(t);
+                const x = state.L1 * Math.cos(2 * Math.PI * state.f1 * t) + 
+                          state.L2 * Math.cos(2 * Math.PI * state.f2 * t) + 
+                          noise;
+                const y = state.L1 * Math.sin(2 * Math.PI * state.f1 * t) + 
+                          state.L2 * Math.sin(2 * Math.PI * state.f2 * t);
+                state.xBuffer.push(x);
+                state.yBuffer.push(y);
+                state.timeBuffer.push(t);
+            }
+        }
+
+        function clearTrail() {
+            trailPositions.length = 0;
+            trailColors.length = 0;
+            if (trailLine) {
+                trailLine.geometry.setDrawRange(0, 0);
+            }
+        }
+
+        // Setup Three.js Scene Configuration
+        function initThree() {
+            container = document.getElementById("three-container");
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x070b12);
+            scene.fog = new THREE.FogExp2(0x070b12, 0.03);
+
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.innerHTML = "";
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 + 0.1;
+
+            setCameraPerspective();
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+
+            // Ground Polar Grid
+            const polarGrid = new THREE.Group();
+            for (let r = 1; r <= 8; r++) {
+                const points = [];
+                for (let theta = 0; theta <= 2 * Math.PI + 0.1; theta += 0.1) {
+                    points.push(new THREE.Vector3(r * Math.cos(theta), r * Math.sin(theta), -0.01));
+                }
+                const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                const material = new THREE.LineBasicMaterial({ color: 0x1e293b, transparent: true, opacity: 0.6 });
+                polarGrid.add(new THREE.Line(geometry, material));
+            }
+            scene.add(polarGrid);
+
+            // Axes lines
+            const axisXGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-10, 0, -0.01), new THREE.Vector3(10, 0, -0.01)]);
+            const axisYGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -10, -0.01), new THREE.Vector3(0, 10, -0.01)]);
+            const axisMat = new THREE.LineBasicMaterial({ color: 0x334155, transparent: true, opacity: 0.4 });
+            scene.add(new THREE.Line(axisXGeom, axisMat));
+            scene.add(new THREE.Line(axisYGeom, axisMat));
+
+            centerSphere = new THREE.Mesh(
+                new THREE.SphereGeometry(0.12, 16, 16),
+                new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.2, metalness: 0.8 })
+            );
+            scene.add(centerSphere);
+
+            // Cylinder arm meshes
+            const arm1Geom = new THREE.CylinderGeometry(0.06, 0.06, 1, 16);
+            arm1Geom.translate(0, 0.5, 0).rotateX(Math.PI / 2);
+            arm1Mesh = new THREE.Mesh(arm1Geom, new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.1, metalness: 0.9, emissive: 0x0ea5e9, emissiveIntensity: 0.2 }));
+            scene.add(arm1Mesh);
+
+            const arm2Geom = new THREE.CylinderGeometry(0.04, 0.04, 1, 16);
+            arm2Geom.translate(0, 0.5, 0).rotateX(Math.PI / 2);
+            arm2Mesh = new THREE.Mesh(arm2Geom, new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.1, metalness: 0.9, emissive: 0xec4899, emissiveIntensity: 0.2 }));
+            scene.add(arm2Mesh);
+
+            jointSphere = new THREE.Mesh(new THREE.SphereGeometry(0.18, 24, 24), new THREE.MeshStandardMaterial({ color: 0x38bdf8, roughness: 0.2 }));
+            scene.add(jointSphere);
+
+            tipSphere = new THREE.Mesh(new THREE.SphereGeometry(0.18, 24, 24), new THREE.MeshStandardMaterial({ color: 0xf43f5e, roughness: 0.2 }));
+            scene.add(tipSphere);
+
+            puckX = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 16), new THREE.MeshStandardMaterial({ color: 0x06b6d4, roughness: 0.3 }));
+            scene.add(puckX);
+
+            puckY = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 16), new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.3 }));
+            scene.add(puckY);
+
+            const dashedMat = new THREE.LineDashedMaterial({ color: 0x475569, dashSize: 0.15, gapSize: 0.1, transparent: true, opacity: 0.7 });
+            projectionLineX = new THREE.Line(new THREE.BufferGeometry(), dashedMat);
+            scene.add(projectionLineX);
+
+            projectionLineY = new THREE.Line(new THREE.BufferGeometry(), dashedMat);
+            scene.add(projectionLineY);
+
+            // Trajectory Trail lines Setup
+            const trailGeom = new THREE.BufferGeometry();
+            trailGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(maxTrailPoints * 3), 3));
+            trailGeom.setAttribute('color', new THREE.BufferAttribute(new Float32Array(maxTrailPoints * 3), 3));
+            
+            trailLine = new THREE.Line(trailGeom, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85 }));
+            scene.add(trailLine);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function setCameraPerspective() {
+            camera.position.set(0, -6.5, 6.5);
+            camera.lookAt(0, 0, 0);
+            controls.target.set(0, 0, 0);
+            controls.enableRotate = true;
+            controls.update();
+        }
+
+        function setCamera2D() {
+            camera.position.set(0, 0, 9);
+            camera.lookAt(0, 0, 0);
+            controls.target.set(0, 0, 0);
+            controls.enableRotate = false;
+            controls.update();
+        }
+
+        function onWindowResize() {
+            if (!container || !renderer) return;
+            const w = container.clientWidth;
+            const h = container.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        }
+
+        function initPlots() {
+            timeCanvas = document.getElementById("canvas-time");
+            timeCtx = timeCanvas.getContext("2d");
+            
+            freqCanvas = document.getElementById("canvas-freq");
+            freqCtx = freqCanvas.getContext("2d");
+        }
+
+        function setupCanvasDPI(canvas) {
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            
+            if (canvas.width !== Math.floor(rect.width * dpr) || canvas.height !== Math.floor(rect.height * dpr)) {
+                canvas.width = Math.floor(rect.width * dpr);
+                canvas.height = Math.floor(rect.height * dpr);
+                const ctx = canvas.getContext("2d");
+                ctx.scale(dpr, dpr);
+                return true;
+            }
+            return false;
+        }
+
+        function drawOscilloscope() {
+            setupCanvasDPI(timeCanvas);
+            const ctx = timeCtx;
+            const w = timeCanvas.width / (window.devicePixelRatio || 1);
+            const h = timeCanvas.height / (window.devicePixelRatio || 1);
+            
+            ctx.clearRect(0, 0, w, h);
+
+            // Grid
+            ctx.strokeStyle = "rgba(30, 41, 59, 0.4)";
+            ctx.lineWidth = 1;
+            const cols = 10;
+            for (let i = 0; i <= cols; i++) {
+                const x = (w / cols) * i;
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+            }
+            const rows = 6;
+            for (let i = 0; i <= rows; i++) {
+                const y = (h / rows) * i;
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+            }
+
+            ctx.strokeStyle = "rgba(71, 85, 105, 0.5)";
+            ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+
+            const totalMaxRange = (state.L1 + state.L2 + (state.noiseEnabled ? state.noiseAmp : 0)) * 1.15;
+            const mapY = (val) => h/2 - (val / totalMaxRange) * (h/2 - 10);
+
+            const N = state.xBuffer.length;
+            if (N === 0) return;
+
+            ctx.strokeStyle = "#22d3ee";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < N; i++) {
+                const py = mapY(state.xBuffer[i]);
+                const px = (i / (N - 1)) * w;
+                if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.stroke();
+
+            if (N > 0) {
+                ctx.fillStyle = "#ec4899";
+                ctx.beginPath();
+                ctx.arc(w - 2, mapY(state.xBuffer[N-1]), 3.5, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            const startLabel = document.getElementById("label-scope-start");
+            if (startLabel) {
+                startLabel.textContent = `-${(N / state.fs).toFixed(2)}s`;
+            }
+        }
+
+        function drawFFTSpectrum() {
+            setupCanvasDPI(freqCanvas);
+            const ctx = freqCtx;
+            const w = freqCanvas.width / (window.devicePixelRatio || 1);
+            const h = freqCanvas.height / (window.devicePixelRatio || 1);
+
+            ctx.clearRect(0, 0, w, h);
+
+            ctx.strokeStyle = "rgba(30, 41, 59, 0.4)";
+            ctx.lineWidth = 1;
+            const cols = 10;
+            for (let i = 0; i <= cols; i++) {
+                const x = (w / cols) * i;
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+            }
+            const rows = 5;
+            for (let i = 0; i <= rows; i++) {
+                const y = (h / rows) * i;
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+            }
+
+            const N = state.N;
+            if (state.xBuffer.length < N) return;
+
+            const re = new Float32Array(N);
+            const im = new Float32Array(N);
+            const win = getHannWindow(N);
+
+            for (let i = 0; i < N; i++) {
+                re[i] = state.xBuffer[i] * win[i];
+                im[i] = 0.0;
+            }
+
+            performFFT(re, im);
+
+            const mag = new Float32Array(N / 2);
+            const scaleFactor = 4.0 / N;
+            for (let i = 0; i < N / 2; i++) {
+                mag[i] = Math.sqrt(re[i] * re[i] + im[i] * im[i]) * scaleFactor;
+            }
+
+            const nyquist = state.fs / 2;
+            const maxVisibleFreq = Math.min(nyquist, Math.max(30.0, Math.max(Math.max(Math.abs(state.f1), Math.abs(state.f2)), state.noiseEnabled ? state.noiseFreq : 0) * 2.5));
+            
+            const getX = (freq) => (freq / maxVisibleFreq) * w;
+            const totalMaxL = (state.L1 + state.L2 + (state.noiseEnabled ? state.noiseAmp : 0)) * 1.15;
+            const getY = (magnitude) => h - 15 - (magnitude / totalMaxL) * (h - 30);
+
+            ctx.strokeStyle = "#34d399";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            let firstPoint = true;
+            for (let i = 0; i < N / 2; i++) {
+                const freq = (i * state.fs) / N;
+                if (freq > maxVisibleFreq) break;
+                const px = getX(freq);
+                const py = getY(mag[i]);
+
+                if (firstPoint) {
+                    ctx.moveTo(px, py);
+                    firstPoint = false;
+                } else {
+                    ctx.lineTo(px, py);
+                }
+            }
+            ctx.stroke();
+
+            // Label axes
+            ctx.fillStyle = "rgba(148, 163, 184, 0.7)";
+            ctx.font = "8px monospace";
+            ctx.fillText("AMPLITUDE", 8, 12);
+
+            // Compute and annotate peaks
+            const getPeakMetrics = (targetFreq) => {
+                const absTarget = Math.abs(targetFreq);
+                const targetBin = Math.round((absTarget * N) / state.fs);
+                let peakBin = targetBin;
+                let maxVal = -1;
+                
+                const neighborhood = 4;
+                for (let b = -neighborhood; b <= neighborhood; b++) {
+                    const currentBin = targetBin + b;
+                    if (currentBin >= 0 && currentBin < N/2) {
+                        if (mag[currentBin] > maxVal) {
+                            maxVal = mag[currentBin];
+                            peakBin = currentBin;
+                        }
+                    }
+                }
+                return { freq: (peakBin * state.fs) / N, amp: maxVal };
+            };
+
+            const annotatePeak = (freq, color, labelName) => {
+                const metrics = getPeakMetrics(freq);
+                const px = getX(metrics.freq);
+                const py = getY(metrics.amp);
+
+                if (px >= 0 && px <= w) {
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([3, 3]);
+                    ctx.beginPath();
+                    ctx.moveTo(px, h - 15);
+                    ctx.lineTo(px, py - 4);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    ctx.fillStyle = color;
+                    ctx.beginPath(); ctx.arc(px, py, 3.5, 0, 2 * Math.PI); ctx.fill();
+
+                    ctx.fillStyle = "#f8fafc";
+                    ctx.font = "bold 8px monospace";
+                    ctx.textAlign = "center";
+                    ctx.fillText(`${labelName}:${metrics.freq.toFixed(1)}Hz`, px, py - 12);
+                    ctx.fillText(`A:${metrics.amp.toFixed(1)}`, px, py - 4);
+                }
+            };
+
+            if (state.L1 > 0.1) annotatePeak(state.f1, "#38bdf8", "f1");
+            if (state.L2 > 0.1) annotatePeak(state.f2, "#f43f5e", "f2");
+            // Annotate noise interference peak if enabled and amplitude is above a tiny threshold
+            if (state.noiseEnabled && state.noiseAmp > 0.05) {
+                annotatePeak(state.noiseFreq, "#f59e0b", "fn");
+            }
+
+            const specEndLabel = document.getElementById("label-spectrum-end");
+            if (specEndLabel) {
+                specEndLabel.textContent = `${maxVisibleFreq.toFixed(1)} Hz`;
+            }
+        }
+
+        function initEngine() {
+            initThree();
+            initPlots();
+            flushBuffers();
+
+            let lastTime = performance.now();
+            let accumulatedAcquisitionTime = 0;
+
+            function animate(timestamp) {
+                requestAnimationFrame(animate);
+
+                let dt = (timestamp - lastTime) / 1000;
+                if (dt > 0.1) dt = 0.1;
+                lastTime = timestamp;
+
+                if (state.isPlaying) {
+                    const speedDt = dt * state.speedScale;
+                    state.simTime += speedDt;
+
+                    const theta1 = 2 * Math.PI * state.f1 * state.simTime;
+                    const theta2 = 2 * Math.PI * state.f2 * state.simTime;
+
+                    const x1 = state.L1 * Math.cos(theta1);
+                    const y1 = state.L1 * Math.sin(theta1);
+
+                    const x2 = x1 + state.L2 * Math.cos(theta2);
+                    const y2 = y1 + state.L2 * Math.sin(theta2);
+
+                    // If noise is enabled, the measured tracking coordinate jitters physically
+                    const currentNoiseVal = getNoiseValue(state.simTime);
+                    const measuredX2 = x2 + currentNoiseVal;
+
+                    const xtEl = document.getElementById("coord-xt");
+                    const ytEl = document.getElementById("coord-yt");
+                    if (xtEl) xtEl.textContent = measuredX2.toFixed(3);
+                    if (ytEl) ytEl.textContent = y2.toFixed(3);
+
+                    // Render dynamic structures
+                    if (arm1Mesh) {
+                        arm1Mesh.scale.set(1, state.L1, 1);
+                        arm1Mesh.rotation.z = theta1 - Math.PI / 2;
+                    }
+                    if (jointSphere) jointSphere.position.set(x1, y1, 0);
+
+                    if (arm2Mesh) {
+                        arm2Mesh.position.set(x1, y1, 0);
+                        arm2Mesh.scale.set(1, state.L2, 1);
+                        arm2Mesh.rotation.z = theta2 - Math.PI / 2;
+                    }
+                    if (tipSphere) tipSphere.position.set(x2, y2, 0);
+
+                    // Slide measurement pucks on axis with visible jitter
+                    if (puckX) puckX.position.set(measuredX2, 0, 0);
+                    if (puckY) puckY.position.set(0, y2, 0);
+
+                    if (projectionLineX) {
+                        // Project from dynamic tip to noisy sliding puck
+                        projectionLineX.geometry.setFromPoints([new THREE.Vector3(x2, y2, 0), new THREE.Vector3(measuredX2, 0, 0)]);
+                        projectionLineX.computeLineDistances();
+                    }
+                    if (projectionLineY) {
+                        projectionLineY.geometry.setFromPoints([new THREE.Vector3(x2, y2, 0), new THREE.Vector3(0, y2, 0)]);
+                        projectionLineY.computeLineDistances();
+                    }
+
+                    // DSP Buffering
+                    accumulatedAcquisitionTime += speedDt;
+                    const samplePeriod = 1 / state.fs;
+                    while (accumulatedAcquisitionTime >= samplePeriod) {
+                        const t_sample = state.simTime - accumulatedAcquisitionTime + samplePeriod;
+                        const sampleNoise = getNoiseValue(t_sample);
+                        
+                        const xs = state.L1 * Math.cos(2 * Math.PI * state.f1 * t_sample) + 
+                                   state.L2 * Math.cos(2 * Math.PI * state.f2 * t_sample) +
+                                   sampleNoise;
+                        const ys = state.L1 * Math.sin(2 * Math.PI * state.f1 * t_sample) + 
+                                   state.L2 * Math.sin(2 * Math.PI * state.f2 * t_sample);
+
+                        state.xBuffer.push(xs);
+                        state.yBuffer.push(ys);
+                        state.timeBuffer.push(t_sample);
+
+                        if (state.xBuffer.length > state.N) {
+                            state.xBuffer.shift();
+                            state.yBuffer.shift();
+                            state.timeBuffer.shift();
+                        }
+                        accumulatedAcquisitionTime -= samplePeriod;
+                    }
+
+                    // Add dynamic path trails of ideal tip
+                    trailPositions.push(x2, y2, 0);
+                    const colorIndex = (state.simTime * 0.2) % 1.0;
+                    const color = new THREE.Color().setHSL(colorIndex, 0.9, 0.5);
+                    trailColors.push(color.r, color.g, color.b);
+
+                    if (trailPositions.length / 3 > maxTrailPoints) {
+                        trailPositions.shift(); trailPositions.shift(); trailPositions.shift();
+                        trailColors.shift(); trailColors.shift(); trailColors.shift();
+                    }
+
+                    if (trailLine) {
+                        const geom = trailLine.geometry;
+                        const posAttrib = geom.attributes.position;
+                        const colAttrib = geom.attributes.color;
+
+                        const numPts = trailPositions.length / 3;
+                        for (let i = 0; i < numPts; i++) {
+                            posAttrib.array[i * 3] = trailPositions[i * 3];
+                            posAttrib.array[i * 3 + 1] = trailPositions[i * 3 + 1];
+                            posAttrib.array[i * 3 + 2] = trailPositions[i * 3 + 2];
+
+                            const ageCoeff = i / (numPts - 1);
+                            colAttrib.array[i * 3] = trailColors[i * 3] * ageCoeff;
+                            colAttrib.array[i * 3 + 1] = trailColors[i * 3 + 1] * ageCoeff;
+                            colAttrib.array[i * 3 + 2] = trailColors[i * 3 + 2] * ageCoeff + 0.15 * (1 - ageCoeff);
+                        }
+                        posAttrib.needsUpdate = true;
+                        colAttrib.needsUpdate = true;
+                        geom.setDrawRange(0, numPts);
+                    }
+                }
+
+                controls.update();
+                renderer.render(scene, camera);
+
+                drawOscilloscope();
+                drawFFTSpectrum();
+            }
+
+            requestAnimationFrame(animate);
+        }
+    </script>
+</body>
+</html>
