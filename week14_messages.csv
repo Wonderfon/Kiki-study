@@ -1,0 +1,101 @@
+message_id,text,has_savings,has_action,has_deadline,has_social_norm,message_length,send_hour,useful
+1,"Save money today. Reduce AC use from 5-8 p.m. Please act before 5 p.m. Most neighbors are participating.",1,1,1,1,109,13,1
+2,"Energy notice for this evening.",0,0,0,0,31,14,0
+3,"Please raise your thermostat two degrees from 5-8 p.m.",0,1,0,0,52,15,1
+4,"Save about $3. Please delay laundry until after 8 p.m. Act before 5 p.m.",1,1,1,0,75,16,1
+5,"Most neighbors are reducing electricity use this evening.",0,0,0,1,56,17,0
+6,"Save money today. Please reduce AC use from 5-8 p.m.",1,1,0,0,55,18,1
+7,"Please delay dishwasher use until after 8 p.m. Act before 5 p.m. Most neighbors are participating.",0,1,1,1,99,19,1
+8,"Save about $2 on your bill. Energy notice for this evening.",1,0,0,0,59,12,0
+9,"Act before 5 p.m. to support the grid.",0,0,1,0,41,13,0
+10,"Save money today. Please raise your thermostat two degrees from 5-8 p.m. Most neighbors are participating.",1,1,0,1,105,14,1
+11,"Please reduce AC use from 5-8 p.m. Act before 5 p.m.",0,1,1,0,57,15,1
+12,"Save about $4. Energy notice for this evening. Most neighbors are participating.",1,0,0,1,78,16,1
+13,"Please delay laundry until after 8 p.m.",0,1,0,0,39,17,0
+14,"Save money today. Act before 5 p.m. to support the grid.",1,0,1,0,57,18,1
+15,"Energy notice for this evening. Most neighbors are reducing use.",0,0,0,1,64,19,0
+16,"Save about $3. Please reduce AC use from 5-8 p.m. Act before 5 p.m.",1,1,1,0,72,12,1
+17,"Please delay dishwasher use until after 8 p.m. Most neighbors are participating.",0,1,0,1,78,13,1
+18,"Save money today. Energy notice for this evening.",1,0,0,0,49,14,0
+19,"Please raise your thermostat two degrees from 5-8 p.m. Act before 5 p.m.",0,1,1,0,74,15,1
+20,"Save about $2. Most neighbors are reducing electricity use this evening.",1,0,0,1,70,16,1
+21,"Act before 5 p.m. to support the grid.",0,0,1,0,41,17,0
+22,"Save money today. Please delay laundry until after 8 p.m.",1,1,0,0,58,18,1
+23,"Please reduce AC use from 5-8 p.m. Most neighbors are participating.",0,1,0,1,72,19,1
+24,"Save about $4. Energy notice for this evening. Act before 5 p.m.",1,0,1,0,66,12,1
+25,"Energy notice for this evening.",0,0,0,0,31,13,0
+26,"Save money today. Please raise your thermostat two degrees from 5-8 p.m. Act before 5 p.m.",1,1,1,0,91,14,1
+27,"Please delay dishwasher use until after 8 p.m.",0,1,0,0,48,15,0
+28,"Save about $3. Most neighbors are participating.",1,0,0,1,47,16,0
+29,"Please reduce AC use from 5-8 p.m. Act before 5 p.m. Most neighbors are reducing use.",0,1,1,1,89,17,1
+30,"Save money today. Energy notice for this evening.",1,0,0,0,49,18,0
+31,"Please delay laundry until after 8 p.m. Act before 5 p.m.",0,1,1,0,57,19,1
+32,"Save about $2. Please reduce AC use from 5-8 p.m. Most neighbors are participating.",1,1,0,1,86,12,1
+33,"Act before 5 p.m. to support the grid.",0,0,1,0,41,13,0
+34,"Save money today. Please raise your thermostat two degrees from 5-8 p.m.",1,1,0,0,73,14,1
+35,"Most neighbors are reducing electricity use this evening.",0,0,0,1,56,15,0
+36,"Save about $4. Please delay dishwasher use until after 8 p.m. Act before 5 p.m.",1,1,1,0,79,16,1
+37,"Please reduce AC use from 5-8 p.m.",0,1,0,0,38,17,0
+38,"Save money today. Act before 5 p.m. Most neighbors are participating.",1,0,1,1,68,18,1
+39,"Energy notice for this evening.",0,0,0,0,31,19,0
+40,"Save about $3. Please delay laundry until after 8 p.m.",1,1,0,0,55,12,1
+41,"Please raise your thermostat two degrees from 5-8 p.m. Act before 5 p.m. Most neighbors are participating.",0,1,1,1,106,13,1
+42,"Save money today. Energy notice for this evening.",1,0,0,0,49,14,0
+43,"Please reduce AC use from 5-8 p.m. Most neighbors are reducing use.",0,1,0,1,68,15,1
+44,"Save about $2. Act before 5 p.m. to support the grid.",1,0,1,0,55,16,1
+45,"Most neighbors are participating in today's energy event.",0,0,0,1,55,17,0
+46,"Save money today. Please delay dishwasher use until after 8 p.m. Act before 5 p.m.",1,1,1,0,81,18,1
+47,"Please delay laundry until after 8 p.m.",0,1,0,0,39,19,0
+48,"Save about $4. Please reduce AC use from 5-8 p.m. Most neighbors are participating.",1,1,0,1,86,12,1
+49,"Act before 5 p.m. to support the grid.",0,0,1,0,41,13,0
+50,"Save money today. Please raise your thermostat two degrees from 5-8 p.m.",1,1,0,0,73,14,1
+51,"Energy notice for this evening. Most neighbors are reducing use.",0,0,0,1,64,15,0
+52,"Save about $3. Please reduce AC use from 5-8 p.m. Act before 5 p.m.",1,1,1,0,72,16,1
+53,"Please delay dishwasher use until after 8 p.m. Most neighbors are participating.",0,1,0,1,78,17,1
+54,"Save money today. Energy notice for this evening.",1,0,0,0,49,18,0
+55,"Please raise your thermostat two degrees from 5-8 p.m. Act before 5 p.m.",0,1,1,0,74,19,1
+56,"Save about $2. Most neighbors are reducing electricity use this evening.",1,0,0,1,70,12,1
+57,"Act before 5 p.m. to support the grid.",0,0,1,0,41,13,0
+58,"Save money today. Please delay laundry until after 8 p.m.",1,1,0,0,58,14,1
+59,"Please reduce AC use from 5-8 p.m. Most neighbors are participating.",0,1,0,1,72,15,1
+60,"Save about $4. Energy notice for this evening. Act before 5 p.m.",1,0,1,0,66,16,1
+61,"Energy notice for this evening.",0,0,0,0,31,17,0
+62,"Save money today. Please raise your thermostat two degrees from 5-8 p.m. Act before 5 p.m.",1,1,1,0,91,18,1
+63,"Please delay dishwasher use until after 8 p.m.",0,1,0,0,48,19,0
+64,"Save about $3. Most neighbors are participating.",1,0,0,1,47,12,0
+65,"Please reduce AC use from 5-8 p.m. Act before 5 p.m. Most neighbors are reducing use.",0,1,1,1,89,13,1
+66,"Save money today. Energy notice for this evening.",1,0,0,0,49,14,0
+67,"Please delay laundry until after 8 p.m. Act before 5 p.m.",0,1,1,0,57,15,1
+68,"Save about $2. Please reduce AC use from 5-8 p.m. Most neighbors are participating.",1,1,0,1,86,16,1
+69,"Act before 5 p.m. to support the grid.",0,0,1,0,41,17,0
+70,"Save money today. Please raise your thermostat two degrees from 5-8 p.m.",1,1,0,0,73,18,1
+71,"Most neighbors are reducing electricity use this evening.",0,0,0,1,56,19,0
+72,"Save about $4. Please delay dishwasher use until after 8 p.m. Act before 5 p.m.",1,1,1,0,79,12,1
+73,"Please reduce AC use from 5-8 p.m.",0,1,0,0,38,13,0
+74,"Save money today. Act before 5 p.m. Most neighbors are participating.",1,0,1,1,68,14,1
+75,"Energy notice for this evening.",0,0,0,0,31,15,0
+76,"Save about $3. Please delay laundry until after 8 p.m.",1,1,0,0,55,16,1
+77,"Please raise your thermostat two degrees from 5-8 p.m. Act before 5 p.m. Most neighbors are participating.",0,1,1,1,106,17,1
+78,"Save money today. Energy notice for this evening.",1,0,0,0,49,18,0
+79,"Please reduce AC use from 5-8 p.m. Most neighbors are reducing use.",0,1,0,1,68,19,1
+80,"Save about $2. Act before 5 p.m. to support the grid.",1,0,1,0,55,12,1
+81,"Most neighbors are participating in today's energy event.",0,0,0,1,55,13,0
+82,"Save money today. Please delay dishwasher use until after 8 p.m. Act before 5 p.m.",1,1,1,0,81,14,1
+83,"Please delay laundry until after 8 p.m.",0,1,0,0,39,15,0
+84,"Save about $4. Please reduce AC use from 5-8 p.m. Most neighbors are participating.",1,1,0,1,86,16,1
+85,"Act before 5 p.m. to support the grid.",0,0,1,0,41,17,0
+86,"Save money today. Please raise your thermostat two degrees from 5-8 p.m.",1,1,0,0,73,18,1
+87,"Energy notice for this evening. Most neighbors are reducing use.",0,0,0,1,64,19,0
+88,"Save about $3. Please reduce AC use from 5-8 p.m. Act before 5 p.m.",1,1,1,0,72,12,1
+89,"Please delay dishwasher use until after 8 p.m. Most neighbors are participating.",0,1,0,1,78,13,1
+90,"Save money today. Energy notice for this evening.",1,0,0,0,49,14,0
+91,"Please raise your thermostat two degrees from 5-8 p.m. Act before 5 p.m.",0,1,1,0,74,15,1
+92,"Save about $2. Most neighbors are reducing electricity use this evening.",1,0,0,1,70,16,1
+93,"Act before 5 p.m. to support the grid.",0,0,1,0,41,17,0
+94,"Save money today. Please delay laundry until after 8 p.m.",1,1,0,0,58,18,1
+95,"Please reduce AC use from 5-8 p.m. Most neighbors are participating.",0,1,0,1,72,19,1
+96,"Save about $4. Energy notice for this evening. Act before 5 p.m.",1,0,1,0,66,12,1
+97,"Energy notice for this evening.",0,0,0,0,31,13,0
+98,"Save money today. Please raise your thermostat two degrees from 5-8 p.m. Act before 5 p.m.",1,1,1,0,91,14,1
+99,"Please delay dishwasher use until after 8 p.m.",0,1,0,0,48,15,0
+100,"Save about $3. Most neighbors are participating.",1,0,0,1,47,16,0
