@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Network Function Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        /* Slider styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e5e7eb;
+            border-radius: 2px;
+        }
+        
+        .param-group {
+            border-left: 2px solid #e5e7eb;
+            padding-left: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* SVG Topology Styling */
+        #topology-svg {
+            width: 100%;
+            height: 100%;
+            min-height: 150px;
+        }
+        .node-circle {
+            fill: #fff;
+            stroke-width: 2px;
+        }
+        .node-input { stroke: #3b82f6; }
+        .node-hidden { stroke: #10b981; }
+        .node-output { stroke: #f59e0b; }
+        .node-text {
+            font-size: 10px;
+            font-family: monospace;
+            text-anchor: middle;
+            dominant-baseline: central;
+            fill: #374151;
+            pointer-events: none;
+        }
+        .edge {
+            stroke: #d1d5db;
+            stroke-width: 1px;
+            opacity: 0.6;
+        }
+        .edge.active {
+            stroke-width: 2px;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans h-screen flex flex-col overflow-hidden">
+
+    <header class="bg-white shadow-sm px-6 py-4 flex justify-between items-center z-10">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Neural Network Function Explorer</h1>
+            <p class="text-sm text-gray-500">Manually explore how weights and biases shape a neural network's output function.</p>
+        </div>
+        <div class="flex gap-2">
+            <button id="btn-randomize" class="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-sm font-medium transition-colors">Randomize Params</button>
+            <button id="btn-reset" class="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded text-sm font-medium transition-colors">Zero Params</button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Panel: Controls -->
+        <aside class="w-1/3 min-w-[350px] max-w-[450px] bg-white border-r border-gray-200 flex flex-col h-full overflow-hidden shadow-[4px_0_15px_-3px_rgba(0,0,0,0.1)] z-0">
+            
+            <div class="p-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+                <h2 class="text-lg font-semibold mb-3">Architecture</h2>
+                
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Input Dimension</label>
+                        <select id="input-dim" class="w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white">
+                            <option value="1">1D (x₁)</option>
+                            <option value="2" selected>2D (x₁, x₂)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Hidden Layers</label>
+                        <select id="num-layers" class="w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white">
+                            <option value="1">1 Layer</option>
+                            <option value="2" selected>2 Layers</option>
+                            <option value="3">3 Layers</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Neurons per Layer</label>
+                        <input type="number" id="num-neurons" value="3" min="1" max="10" class="w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Hidden Activation</label>
+                        <select id="hidden-act" class="w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white">
+                            <option value="relu" selected>ReLU</option>
+                            <option value="tanh">tanh</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Output Activation</label>
+                        <select id="output-act" class="w-full border border-gray-300 rounded px-2 py-1 text-sm bg-white">
+                            <option value="linear" selected>Linear</option>
+                            <option value="sigmoid">Sigmoid</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                         <button id="btn-apply-arch" class="w-full bg-blue-600 hover:bg-blue-700 text-white rounded px-2 py-1 text-sm font-medium transition-colors">Apply Changes</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-b border-gray-200 bg-white flex-shrink-0 relative" style="height: 160px;" id="topology-container">
+                <h3 class="absolute top-2 left-3 text-xs font-semibold text-gray-500 bg-white px-1 rounded shadow-sm z-10">Network Topology</h3>
+                <svg id="topology-svg"></svg>
+            </div>
+
+            <!-- Parameters Scrollable Area -->
+            <div class="flex-1 overflow-y-auto p-4 bg-white" id="parameters-container">
+                <!-- Parameter controls injected here by JS -->
+            </div>
+            
+            <!-- Loss Display -->
+            <div class="p-4 border-t border-gray-200 bg-gray-800 text-white flex justify-between items-center flex-shrink-0">
+                <span class="font-medium text-gray-300">Mean Squared Error (MSE):</span>
+                <span id="loss-display" class="font-mono text-xl text-green-400 font-bold">0.0000</span>
+            </div>
+        </aside>
+
+        <section class="flex-1 flex flex-col bg-gray-100 relative h-full">
+            
+            <!-- Plot Area -->
+            <div class="flex-1 p-2 h-2/3" id="plot-container">
+                 <div id="plotly-div" class="w-full h-full bg-white rounded shadow-sm"></div>
+            </div>
+
+            <!-- Bottom Panel: Data & Info -->
+            <div class="h-1/3 min-h-[250px] bg-white border-t border-gray-200 flex shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)]">
+                
+                <!-- Data Editor -->
+                <div class="w-1/2 p-4 border-r border-gray-200 flex flex-col h-full">
+                    <div class="flex justify-between items-center mb-2 flex-shrink-0">
+                        <h3 class="font-semibold text-gray-800 text-sm">Dataset (Target Function)</h3>
+                        <div class="flex gap-2">
+                             <select id="preset-data" class="border border-gray-300 rounded px-2 py-1 text-xs bg-gray-50">
+                                <option value="linear">Linear</option>
+                                <option value="quadratic">Quadratic/Paraboloid</option>
+                                <option value="sine">Sine Wave</option>
+                                <option value="xor" selected>XOR / Checkers</option>
+                            </select>
+                            <button id="btn-add-point" class="px-2 py-1 bg-green-100 text-green-700 hover:bg-green-200 rounded text-xs font-medium">+ Point</button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto bg-gray-50 rounded border border-gray-200 p-2">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-500 uppercase sticky top-0 bg-gray-50">
+                                <tr>
+                                    <th class="px-2 py-1">x₁</th>
+                                    <th class="px-2 py-1" id="th-x2">x₂</th>
+                                    <th class="px-2 py-1">y (target)</th>
+                                    <th class="px-2 py-1 w-10"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-table-body" class="font-mono">
+                                <!-- Data rows injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Explanations -->
+                <div class="w-1/2 p-4 overflow-y-auto bg-gray-50 h-full">
+                    <h3 class="font-semibold text-gray-800 text-sm mb-2">Forward Pass Explanation</h3>
+                    <div class="text-xs text-gray-600 space-y-2 bg-white p-3 rounded border border-gray-200">
+                        <p><strong>Input ($x$):</strong> Features fed into the network. (<span id="info-in-dim">2</span>D).</p>
+                        <p><strong>Linear Step ($z$):</strong> For a neuron $j$ in layer $l$, it calculates the weighted sum of outputs from the previous layer plus a bias: <br>
+                        <code class="block mt-1 bg-gray-100 p-1 rounded">$z_j^{(l)} = \sum_i (w_{ij}^{(l)} \cdot a_i^{(l-1)}) + b_j^{(l)}$</code></p>
+                        <p><strong>Activation ($a$):</strong> A non-linear function applied to $z$.<br>
+                           <span class="inline-block mt-1">
+                               - ReLU ($a = \max(0, z)$): Adds 'bends' or 'folds' to the surface.<br>
+                               - tanh ($a = \frac{e^z - e^{-z}}{e^z + e^{-z}}$): S-shaped curve between -1 and 1.
+                           </span>
+                        </p>
+                        <p><strong>Output ($\hat{y}$):</strong> The final layer aggregates the hidden features into a single prediction.</p>
+                        <p class="text-blue-600 font-medium pt-2 border-t border-gray-100">
+                            Try adjusting a bias in the first layer to shift a 'fold', or a weight in the final layer to amplify it!
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- State Management ---
+        const state = {
+            arch: {
+                inputDim: 2,
+                numLayers: 2,
+                neuronsPerLayer: 3,
+                hiddenAct: 'relu', // 'relu' or 'tanh'
+                outputAct: 'linear' // 'linear' or 'sigmoid'
+            },
+            params: {
+                weights: [], // Array of 2D arrays (layers -> neurons_out -> neurons_in)
+                biases: []   // Array of 1D arrays (layers -> neurons_out)
+            },
+            data: [], // Array of objects {x1, x2, y}
+            plotRes: 25 // Resolution for surface plot grid
+        };
+
+        // --- Datasets ---
+        const datasets = {
+            1: {
+                linear: [
+                    {x1: -2, x2: 0, y: -1}, {x1: 0, x2: 0, y: 0}, {x1: 2, x2: 0, y: 1}
+                ],
+                quadratic: [
+                    {x1: -2, x2: 0, y: 1}, {x1: -1, x2: 0, y: -0.5}, {x1: 0, x2: 0, y: -1}, 
+                    {x1: 1, x2: 0, y: -0.5}, {x1: 2, x2: 0, y: 1}
+                ],
+                sine: [
+                    {x1: -3, x2: 0, y: 0}, {x1: -1.5, x2: 0, y: 1}, {x1: 0, x2: 0, y: 0}, 
+                    {x1: 1.5, x2: 0, y: -1}, {x1: 3, x2: 0, y: 0}
+                ],
+                xor: [ // Step-like
+                    {x1: -2, x2: 0, y: -1}, {x1: -1, x2: 0, y: -1}, {x1: -0.5, x2: 0, y: 1},
+                    {x1: 0.5, x2: 0, y: 1}, {x1: 1, x2: 0, y: -1}, {x1: 2, x2: 0, y: -1}
+                ]
+            },
+            2: {
+                linear: [
+                    {x1: -2, x2: -2, y: -1}, {x1: 2, x2: 2, y: 1}, {x1: -2, x2: 2, y: 0}, {x1: 2, x2: -2, y: 0}
+                ],
+                quadratic: [
+                    {x1: -2, x2: -2, y: 1}, {x1: 0, x2: 0, y: -1}, {x1: 2, x2: 2, y: 1},
+                    {x1: -2, x2: 2, y: 1}, {x1: 2, x2: -2, y: 1}, {x1: 0, x2: 2, y: 0}, {x1: 2, x2: 0, y: 0}
+                ],
+                sine: [
+                    {x1: -2, x2: 0, y: -1}, {x1: -1, x2: 0, y: 0}, {x1: 0, x2: 0, y: 1}, {x1: 1, x2: 0, y: 0}, {x1: 2, x2: 0, y: -1},
+                    {x1: 0, x2: -2, y: -1}, {x1: 0, x2: -1, y: 0}, {x1: 0, x2: 1, y: 0}, {x1: 0, x2: 2, y: -1}
+                ],
+                xor: [
+                    {x1: -2, x2: -2, y: -1}, {x1: 2, x2: -2, y: 1}, 
+                    {x1: -2, x2: 2, y: 1}, {x1: 2, x2: 2, y: -1}
+                ]
+            }
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            inputDim: document.getElementById('input-dim'),
+            numLayers: document.getElementById('num-layers'),
+            numNeurons: document.getElementById('num-neurons'),
+            hiddenAct: document.getElementById('hidden-act'),
+            outputAct: document.getElementById('output-act'),
+            btnApplyArch: document.getElementById('btn-apply-arch'),
+            btnRandomize: document.getElementById('btn-randomize'),
+            btnReset: document.getElementById('btn-reset'),
+            paramsContainer: document.getElementById('parameters-container'),
+            lossDisplay: document.getElementById('loss-display'),
+            presetData: document.getElementById('preset-data'),
+            btnAddPoint: document.getElementById('btn-add-point'),
+            dataTableBody: document.getElementById('data-table-body'),
+            thX2: document.getElementById('th-x2'),
+            infoInDim: document.getElementById('info-in-dim'),
+            topologySvg: document.getElementById('topology-svg')
+        };
+
+        // --- STREAMING_CHUNK:Math & Neural Network Core... ---
+        
+        // Activations
+        const acts = {
+            relu: x => Math.max(0, x),
+            tanh: x => Math.tanh(x),
+            linear: x => x,
+            sigmoid: x => 1 / (1 + Math.exp(-x))
+        };
+
+        // Forward Pass (single point)
+        function forward(x1, x2) {
+            let a = state.arch.inputDim === 1 ? [x1] : [x1, x2];
+            
+            // Hidden layers
+            for (let l = 0; l < state.arch.numLayers; l++) {
+                let nextA = [];
+                for (let j = 0; j < state.arch.neuronsPerLayer; j++) {
+                    let z = state.params.biases[l][j];
+                    for (let i = 0; i < a.length; i++) {
+                        z += a[i] * state.params.weights[l][j][i];
+                    }
+                    nextA.push(acts[state.arch.hiddenAct](z));
+                }
+                a = nextA;
+            }
+            
+            // Output layer
+            let outL = state.arch.numLayers;
+            let zOut = state.params.biases[outL][0];
+            for (let i = 0; i < a.length; i++) {
+                zOut += a[i] * state.params.weights[outL][0][i];
+            }
+            
+            return acts[state.arch.outputAct](zOut);
+        }
+
+        // Initialize Parameters Arrays based on architecture
+        function initParams(randomize = false) {
+            const { inputDim, numLayers, neuronsPerLayer } = state.arch;
+            state.params.weights = [];
+            state.params.biases = [];
+            
+            const randVal = () => randomize ? (Math.random() * 4 - 2) : 0.1; // Random between -2 and 2, or 0.1 default
+            
+            let prevDim = inputDim;
+            
+            // Hidden layers
+            for (let l = 0; l < numLayers; l++) {
+                let wLayer = [];
+                let bLayer = [];
+                for (let j = 0; j < neuronsPerLayer; j++) {
+                    let wNeuron = [];
+                    for (let i = 0; i < prevDim; i++) {
+                        wNeuron.push(randVal());
+                    }
+                    wLayer.push(wNeuron);
+                    bLayer.push(randVal());
+                }
+                state.params.weights.push(wLayer);
+                state.params.biases.push(bLayer);
+                prevDim = neuronsPerLayer;
+            }
+            
+            // Output layer (1 neuron)
+            let wOut = [];
+            for (let i = 0; i < prevDim; i++) {
+                wOut.push(randVal());
+            }
+            state.params.weights.push([wOut]);
+            state.params.biases.push([randVal()]);
+        }
+
+        // Calculate MSE
+        function calcLoss() {
+            if (state.data.length === 0) return 0;
+            let sumSqErr = 0;
+            for (let pt of state.data) {
+                let pred = forward(pt.x1, pt.x2);
+                let err = pred - pt.y;
+                sumSqErr += err * err;
+            }
+            return sumSqErr / state.data.length;
+        }
+
+        // --- STREAMING_CHUNK:Topology Visualization... ---
+        function renderTopology() {
+            const svg = els.topologySvg;
+            svg.innerHTML = ''; // Clear existing
+            
+            const width = svg.clientWidth || 350;
+            const height = svg.clientHeight || 150;
+            const margin = { top: 20, bottom: 20, left: 30, right: 30 };
+            
+            const layers = [];
+            // Input layer
+            layers.push({ type: 'input', count: state.arch.inputDim, nodes: [] });
+            // Hidden layers
+            for (let i = 0; i < state.arch.numLayers; i++) {
+                layers.push({ type: 'hidden', count: state.arch.neuronsPerLayer, nodes: [] });
+            }
+            // Output layer
+            layers.push({ type: 'output', count: 1, nodes: [] });
+
+            const numLayers = layers.length;
+            const layerSpacing = (width - margin.left - margin.right) / Math.max(1, numLayers - 1);
+            const nodeRadius = 12;
+
+            // Calculate node positions
+            layers.forEach((layer, lIndex) => {
+                const x = margin.left + lIndex * layerSpacing;
+                const availableHeight = height - margin.top - margin.bottom;
+                const nodeSpacing = availableHeight / Math.max(1, layer.count);
+                
+                // Center the nodes vertically
+                const startY = margin.top + (availableHeight - (layer.count - 1) * nodeSpacing) / 2;
+
+                for (let nIndex = 0; nIndex < layer.count; nIndex++) {
+                    const y = startY + nIndex * nodeSpacing;
+                    let label = '';
+                    if (layer.type === 'input') label = `x${nIndex + 1}`;
+                    else if (layer.type === 'hidden') label = `h${lIndex},${nIndex + 1}`;
+                    else if (layer.type === 'output') label = 'y';
+
+                    layer.nodes.push({ x, y, label, type: layer.type, lIndex, nIndex });
+                }
+            });
+
+            // Draw Edges (Weights)
+            for (let l = 0; l < numLayers - 1; l++) {
+                const currentLayer = layers[l];
+                const nextLayer = layers[l + 1];
+
+                currentLayer.nodes.forEach(n1 => {
+                    nextLayer.nodes.forEach(n2 => {
+                        // Generate a unique ID for the edge based on layer and nodes to style it later if needed
+                        let weightVal = 0;
+                        if(l === 0) {
+                             weightVal = state.params.weights[l] && state.params.weights[l][n2.nIndex] ? state.params.weights[l][n2.nIndex][n1.nIndex] : 0;
+                        } else if (l === numLayers - 2) {
+                             weightVal = state.params.weights[l] && state.params.weights[l][0] ? state.params.weights[l][0][n1.nIndex] : 0;
+                        } else {
+                             weightVal = state.params.weights[l] && state.params.weights[l][n2.nIndex] ? state.params.weights[l][n2.nIndex][n1.nIndex] : 0;
+                        }
+
+
+                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line.setAttribute('x1', n1.x);
+                        line.setAttribute('y1', n1.y);
+                        line.setAttribute('x2', n2.x);
+                        line.setAttribute('y2', n2.y);
+                        line.setAttribute('class', 'edge');
+                        
+                        // Optional: color edges based on sign of weight (requires updating this function on param change, currently it only draws on arch change for performance)
+                        // if(weightVal > 0) { line.style.stroke = 'rgba(16, 185, 129, 0.4)'; } 
+                        // else if (weightVal < 0) { line.style.stroke = 'rgba(239, 68, 68, 0.4)'; }
+
+                        svg.appendChild(line);
+                    });
+                });
+            }
+
+            // Draw Nodes (Neurons)
+            layers.forEach(layer => {
+                layer.nodes.forEach(node => {
+                    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                    
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', node.x);
+                    circle.setAttribute('cy', node.y);
+                    circle.setAttribute('r', nodeRadius);
+                    circle.setAttribute('class', `node-circle node-${node.type}`);
+                    
+                    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                    text.setAttribute('x', node.x);
+                    text.setAttribute('y', node.y);
+                    text.setAttribute('class', 'node-text');
+                    text.textContent = node.label;
+
+                    group.appendChild(circle);
+                    group.appendChild(text);
+                    svg.appendChild(group);
+                });
+            });
+        }
+
+
+        // --- STREAMING_CHUNK:UI Generation (Controls)... ---
+
+        // Generate the parameter sliders
+        function renderParameterControls() {
+            els.paramsContainer.innerHTML = '';
+            
+            const createControl = (label, path, value) => {
+                const id = path.join('-');
+                return `
+                    <div class="mb-2">
+                        <div class="flex justify-between text-xs mb-1">
+                            <label for="${id}" class="text-gray-600 font-mono">${label}</label>
+                            <input type="number" id="${id}-num" class="w-16 text-right border border-gray-300 rounded px-1 text-xs" step="0.1" value="${value.toFixed(2)}">
+                        </div>
+                        <input type="range" id="${id}-range" min="-5" max="5" step="0.01" value="${value}" class="w-full">
+                    </div>
+                `;
+            };
+
+            const addLayerGroup = (title, content) => {
+                const div = document.createElement('div');
+                div.className = 'mb-4 border border-gray-200 rounded overflow-hidden';
+                div.innerHTML = `
+                    <div class="bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-700 border-b border-gray-200">${title}</div>
+                    <div class="p-3">${content}</div>
+                `;
+                els.paramsContainer.appendChild(div);
+            };
+
+            // Hidden Layers
+            for (let l = 0; l < state.arch.numLayers; l++) {
+                let html = '';
+                for (let j = 0; j < state.arch.neuronsPerLayer; j++) {
+                    html += `<div class="param-group">`;
+                    html += `<div class="text-xs font-bold text-gray-500 mb-1">Neuron ${j+1}</div>`;
+                    
+                    // Weights
+                    let prevDim = l === 0 ? state.arch.inputDim : state.arch.neuronsPerLayer;
+                    for (let i = 0; i < prevDim; i++) {
+                        let wLabel = l===0 ? `w<sub>${j+1},x${i+1}</sub>` : `w<sub>${j+1},a${i+1}</sub>`;
+                        html += createControl(wLabel, ['w', l, j, i], state.params.weights[l][j][i]);
+                    }
+                    // Bias
+                    html += createControl(`b<sub>${j+1}</sub>`, ['b', l, j], state.params.biases[l][j]);
+                    html += `</div>`;
+                }
+                addLayerGroup(`Hidden Layer ${l+1}`, html);
+            }
+
+            // Output Layer
+            let outL = state.arch.numLayers;
+            let html = `<div class="param-group">`;
+            for (let i = 0; i < state.arch.neuronsPerLayer; i++) {
+                 html += createControl(`w<sub>out,a${i+1}</sub>`, ['w', outL, 0, i], state.params.weights[outL][0][i]);
+            }
+            html += createControl(`b<sub>out</sub>`, ['b', outL, 0], state.params.biases[outL][0]);
+            html += `</div>`;
+            addLayerGroup('Output Layer', html);
+
+            // Attach Event Listeners to new controls
+            const syncInputs = (e) => {
+                const isNum = e.target.id.endsWith('-num');
+                const baseId = isNum ? e.target.id.slice(0, -4) : e.target.id.slice(0, -6);
+                const val = parseFloat(e.target.value) || 0;
+                
+                const numEl = document.getElementById(`${baseId}-num`);
+                const rangeEl = document.getElementById(`${baseId}-range`);
+                
+                if (isNum) rangeEl.value = val;
+                else numEl.value = val.toFixed(2);
+
+                // Update state
+                const parts = baseId.split('-');
+                const type = parts[0]; // 'w' or 'b'
+                const l = parseInt(parts[1]);
+                const j = parseInt(parts[2]);
+                
+                if (type === 'w') {
+                    const i = parseInt(parts[3]);
+                    state.params.weights[l][j][i] = val;
+                } else {
+                    state.params.biases[l][j] = val;
+                }
+
+                updateVis();
+            };
+
+            els.paramsContainer.querySelectorAll('input').forEach(input => {
+                input.addEventListener('input', syncInputs);
+            });
+        }
+
+        // --- STREAMING_CHUNK:UI Generation (Data Table)... ---
+        
+        function renderDataTable() {
+            els.dataTableBody.innerHTML = '';
+            
+            // Handle table headers based on dimension
+            if (state.arch.inputDim === 1) {
+                els.thX2.style.display = 'none';
+            } else {
+                els.thX2.style.display = 'table-cell';
+            }
+
+            state.data.forEach((pt, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-100 hover:bg-gray-100";
+                
+                let x2Cell = state.arch.inputDim === 1 ? '' : `
+                    <td class="px-2 py-1">
+                        <input type="number" step="0.1" class="w-14 bg-transparent border-b border-transparent focus:border-gray-400 outline-none" value="${pt.x2}" data-idx="${index}" data-field="x2">
+                    </td>
+                `;
+
+                tr.innerHTML = `
+                    <td class="px-2 py-1">
+                        <input type="number" step="0.1" class="w-14 bg-transparent border-b border-transparent focus:border-gray-400 outline-none" value="${pt.x1}" data-idx="${index}" data-field="x1">
+                    </td>
+                    ${x2Cell}
+                    <td class="px-2 py-1">
+                        <input type="number" step="0.1" class="w-14 bg-transparent border-b border-transparent focus:border-gray-400 outline-none" value="${pt.y}" data-idx="${index}" data-field="y">
+                    </td>
+                    <td class="px-2 py-1 text-right">
+                        <button class="text-red-500 hover:text-red-700 font-bold px-1 rounded del-btn" data-idx="${index}">×</button>
+                    </td>
+                `;
+                els.dataTableBody.appendChild(tr);
+            });
+
+            // Data Edit Listeners
+            els.dataTableBody.querySelectorAll('input').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const idx = parseInt(e.target.dataset.idx);
+                    const field = e.target.dataset.field;
+                    const val = parseFloat(e.target.value) || 0;
+                    state.data[idx][field] = val;
+                    // For 1D, force x2 to 0
+                    if (state.arch.inputDim === 1 && field !== 'x2') {
+                        state.data[idx].x2 = 0; 
+                    }
+                    updateVis();
+                });
+            });
+
+            // Data Delete Listeners
+            els.dataTableBody.querySelectorAll('.del-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(e.target.dataset.idx);
+                    state.data.splice(idx, 1);
+                    renderDataTable();
+                    updateVis();
+                });
+            });
+        }
+
+        // --- STREAMING_CHUNK:Plotly Visualization... ---
+
+        function updateVis() {
+            // 1. Update Loss
+            const mse = calcLoss();
+            els.lossDisplay.textContent = mse.toFixed(4);
+
+            // 2. Generate Grid for Plot
+            const res = state.plotRes;
+            const xRange = [-3, 3];
+            const yRange = [-3, 3];
+            
+            // For surface plot
+            const x1Vals = [];
+            const x2Vals = [];
+            const zVals = [];
+
+            for (let i = 0; i <= res; i++) {
+                x1Vals.push(xRange[0] + (xRange[1] - xRange[0]) * (i / res));
+                x2Vals.push(yRange[0] + (yRange[1] - yRange[0]) * (i / res));
+            }
+
+            if (state.arch.inputDim === 2) {
+                // Generate 2D grid for surface
+                for (let j = 0; j <= res; j++) {
+                    let row = [];
+                    for (let i = 0; i <= res; i++) {
+                        row.push(forward(x1Vals[i], x2Vals[j]));
+                    }
+                    zVals.push(row);
+                }
+            }
+
+            // 3. Prepare Traces
+            const traces = [];
+
+            // True Data Points Trace
+            if (state.data.length > 0) {
+                const dataPts = {
+                    x: state.data.map(d => d.x1),
+                    y: state.arch.inputDim === 1 ? state.data.map(d => 0) : state.data.map(d => d.x2),
+                    z: state.data.map(d => d.y),
+                    mode: 'markers',
+                    type: 'scatter3d',
+                    marker: {
+                        size: 6,
+                        color: 'red',
+                        line: {color: 'white', width: 1},
+                        opacity: 1
+                    },
+                    name: 'Target Data',
+                    hovertemplate: 'x1: %{x:.2f}<br>x2: %{y:.2f}<br>y (target): %{z:.2f}<extra></extra>'
+                };
+                traces.push(dataPts);
+            }
+
+            // Predicted Surface/Line Trace
+            if (state.arch.inputDim === 2) {
+                traces.push({
+                    x: x1Vals,
+                    y: x2Vals,
+                    z: zVals,
+                    type: 'surface',
+                    colorscale: 'Viridis',
+                    opacity: 0.8,
+                    name: 'Predicted Function',
+                    hovertemplate: 'x1: %{x:.2f}<br>x2: %{y:.2f}<br>y (pred): %{z:.2f}<extra></extra>',
+                    showscale: false
+                });
+            } else {
+                // 1D prediction on x2=0 plane
+                const predZ = x1Vals.map(x1 => forward(x1, 0));
+                traces.push({
+                    x: x1Vals,
+                    y: Array(x1Vals.length).fill(0),
+                    z: predZ,
+                    mode: 'lines',
+                    type: 'scatter3d',
+                    line: {
+                        color: '#3b82f6',
+                        width: 6
+                    },
+                    name: 'Predicted Function',
+                    hovertemplate: 'x1: %{x:.2f}<br>y (pred): %{z:.2f}<extra></extra>'
+                });
+                
+                // Add a faint plane to show x2=0
+                traces.push({
+                    x: xRange,
+                    y: [-0.01, 0.01],
+                    z: [[-5, -5], [5, 5]],
+                    type: 'surface',
+                    showscale: false,
+                    opacity: 0.1,
+                    colorscale: [[0, 'gray'], [1, 'gray']],
+                    hoverinfo: 'skip'
+                });
+            }
+
+
+            const layout = {
+                margin: { l: 0, r: 0, b: 0, t: 30 },
+                scene: {
+                    xaxis: { title: 'x₁ (Input 1)', range: xRange },
+                    yaxis: { 
+                        title: state.arch.inputDim === 2 ? 'x₂ (Input 2)' : 'x₂ = 0', 
+                        range: state.arch.inputDim === 2 ? yRange : [-1, 1],
+                        showticklabels: state.arch.inputDim === 2
+                    },
+                    zaxis: { title: 'y (Output)', range: [-3, 3] },
+                    camera: {
+                        eye: state.arch.inputDim === 2 ? {x: 1.5, y: 1.5, z: 1.2} : {x: 0, y: -2, z: 0.5} // Direct view for 1D
+                    }
+                },
+                showlegend: false,
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                title: {
+                    text: '3D Function Space',
+                    font: { size: 14 }
+                }
+            };
+
+            Plotly.react('plotly-div', traces, layout, {responsive: true, displayModeBar: false});
+        }
+
+        // --- STREAMING_CHUNK:Event Listeners & Initialization... ---
+
+        function loadPresetData() {
+            const dim = state.arch.inputDim;
+            const presetName = els.presetData.value;
+            // Deep copy to prevent reference mutation
+            state.data = JSON.parse(JSON.stringify(datasets[dim][presetName]));
+            renderDataTable();
+        }
+
+        function applyArchitecture() {
+            state.arch.inputDim = parseInt(els.inputDim.value);
+            state.arch.numLayers = parseInt(els.numLayers.value);
+            state.arch.neuronsPerLayer = parseInt(els.numNeurons.value);
+            state.arch.hiddenAct = els.hiddenAct.value;
+            state.arch.outputAct = els.outputAct.value;
+            
+            els.infoInDim.textContent = state.arch.inputDim;
+            
+            loadPresetData(); // Reload data suited for dimension
+            initParams(false); // Reset params to small defaults
+            renderTopology();  // Draw the network structure
+            renderParameterControls();
+            updateVis();
+        }
+
+        // Listeners for top controls
+        els.btnApplyArch.addEventListener('click', applyArchitecture);
+        
+        els.btnRandomize.addEventListener('click', () => {
+            initParams(true);
+            renderParameterControls();
+            updateVis();
+        });
+
+        els.btnReset.addEventListener('click', () => {
+            // Set all params to 0
+            for(let l=0; l<state.params.weights.length; l++){
+                for(let j=0; j<state.params.weights[l].length; j++){
+                    state.params.biases[l][j] = 0;
+                    for(let i=0; i<state.params.weights[l][j].length; i++){
+                         state.params.weights[l][j][i] = 0;
+                    }
+                }
+            }
+            renderParameterControls();
+            updateVis();
+        });
+
+        // Data controls
+        els.presetData.addEventListener('change', () => {
+            loadPresetData();
+            updateVis();
+        });
+
+        els.btnAddPoint.addEventListener('click', () => {
+            state.data.push({
+                x1: (Math.random() * 4 - 2).toFixed(1),
+                x2: state.arch.inputDim === 2 ? (Math.random() * 4 - 2).toFixed(1) : 0,
+                y: (Math.random() * 4 - 2).toFixed(1)
+            });
+            renderDataTable();
+            updateVis();
+            
+            // Scroll table to bottom
+            els.dataTableBody.parentElement.parentElement.scrollTop = els.dataTableBody.parentElement.parentElement.scrollHeight;
+        });
+
+        // Initialize Plotly with empty data first to establish container
+        Plotly.newPlot('plotly-div', [], {margin: {t:0,b:0,l:0,r:0}});
+
+        // Handle window resize for Plotly
+        window.addEventListener('resize', () => {
+            Plotly.Plots.resize(document.getElementById('plotly-div'));
+            renderTopology(); // Redraw topology on resize to fit container
+        });
+
+        // Boot
+        applyArchitecture(); 
+        
+    </script>
+</body>
+</html>
